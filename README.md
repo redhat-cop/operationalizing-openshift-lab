@@ -1,0 +1,1 @@
+# operationalizing-openshift-lab
