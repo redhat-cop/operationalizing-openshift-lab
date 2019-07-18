@@ -1,0 +1,23 @@
+---
+apiVersion: v1
+kind: Template
+objects:
+- apiVersion: "autoscaling.openshift.io/v1beta1"
+  kind: "MachineAutoscaler"
+  metadata:
+    name: "worker-${CLOUD_REGION_ZONE}"
+    namespace: openshift-machine-api
+  spec:
+    minReplicas: 1
+    maxReplicas: 12
+    scaleTargetRef:
+      apiVersion: machine.openshift.io/v1beta1
+      kind: MachineSet
+      name: ${CLUSTER_ID}-worker-${CLOUD_REGION_ZONE}
+parameters:
+- name: CLUSTER_ID
+  description: "Example Value - mycluster-dev-x85t8"
+  required: true
+- name: CLOUD_REGION_ZONE
+  description: "Example Value - us-east-1a"
+  required: true
