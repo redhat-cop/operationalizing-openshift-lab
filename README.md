@@ -15,3 +15,16 @@ In OpenShift 4, every cluster starts out the same way -- a bootstrapped control 
 Note that the purpose of this lab is not to teach how each of the components works individually, but to show how one can employ a common automation strategy to a myriad of different configurations.
 
 Let's get started...
+
+## Iteration 1: Initial rollout of cluster configuration
+
+When OpenShift gets installed, a _cluster id_ is generated from the `name` passed in the install-config.yaml, as well as a randomized uid that the installer generates. Several resources we are going to apply need that cluster id value, so we'll grab it and set it to a local variable.
+
+    cluster_id=$(oc get machinesets -n openshift-machine-api -o jsonpath='{.items[0].metadata.labels.machine\.openshift\.io\/cluster-api-cluster}')
+
+OK, now let's roll out our first config. We're going to do this using OpenShift Applier.
+
+    git clone <this repo>
+    cd operationalizing-openshift-lab
+    ansible-galaxy install -r requirements.yml -p galaxy
+    ansible-playbook -i .applier/ galaxy/openshift-applier/playbooks/openshift-cluster-seed.yml -e clusterid=${cluster_id}
