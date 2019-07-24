@@ -1,5 +1,5 @@
 clusterid: 1234
-cloudregionzone: 1234
+cloudregion: 1234
 
 openshift_cluster_content:
 - object: Cluster Autoscaling
@@ -10,17 +10,17 @@ openshift_cluster_content:
     template: "{{ inventory_dir }}/../templates/machineautoscaler.yaml"
     params_from_vars:
       CLUSTER_ID: "{{ clusterid }}"
-      CLOUD_REGION_ZONE: "{{ cloudregionzone }}a"
+      CLOUD_REGION_ZONE: "{{ cloudregion }}a"
     namespace: openshift-machine-api
   - name: MachineAutoscaler zone b
     template: "{{ inventory_dir }}/../templates/machineautoscaler.yaml"
     params_from_vars:
       CLUSTER_ID: "{{ clusterid }}"
-      CLOUD_REGION_ZONE: "{{ cloudregionzone }}b"
+      CLOUD_REGION_ZONE: "{{ cloudregion }}b"
     namespace: openshift-machine-api
   - name: MachineAutoscaler zone c
     template: "{{ inventory_dir }}/../templates/machineautoscaler.yaml"
     params_from_vars:
       CLUSTER_ID: "{{ clusterid }}"
-      CLOUD_REGION_ZONE: "{{ cloudregionzone }}c"
+      CLOUD_REGION_ZONE: "{{ cloudregion }}c"
     namespace: openshift-machine-api
