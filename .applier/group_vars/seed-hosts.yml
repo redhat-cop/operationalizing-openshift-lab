@@ -1,25 +1,26 @@
 clusterid: 1234
+cloudregion: 1234
 
 openshift_cluster_content:
 - object: Cluster Autoscaling
   content:
   - name: ClusterAutoscaler
     file: "{{ inventory_dir }}/../manifests/clusterautoscaler.yaml"
-  - name: MachineAutoscaler zone 2a
+  - name: MachineAutoscaler zone a
     template: "{{ inventory_dir }}/../templates/machineautoscaler.yaml"
     params_from_vars:
       CLUSTER_ID: "{{ clusterid }}"
-      CLOUD_REGION_ZONE: us-east-2a
+      CLOUD_REGION_ZONE: "{{ cloudregion }}a"
     namespace: openshift-machine-api
-  - name: MachineAutoscaler zone 2b
+  - name: MachineAutoscaler zone b
     template: "{{ inventory_dir }}/../templates/machineautoscaler.yaml"
     params_from_vars:
       CLUSTER_ID: "{{ clusterid }}"
-      CLOUD_REGION_ZONE: us-east-2b
+      CLOUD_REGION_ZONE: "{{ cloudregion }}b"
     namespace: openshift-machine-api
-  - name: MachineAutoscaler zone 2c
+  - name: MachineAutoscaler zone c
     template: "{{ inventory_dir }}/../templates/machineautoscaler.yaml"
     params_from_vars:
       CLUSTER_ID: "{{ clusterid }}"
-      CLOUD_REGION_ZONE: us-east-2c
+      CLOUD_REGION_ZONE: "{{ cloudregion }}c"
     namespace: openshift-machine-api

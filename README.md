@@ -22,9 +22,17 @@ When OpenShift gets installed, a _cluster id_ is generated from the `name` passe
 
     cluster_id=$(oc get machinesets -n openshift-machine-api -o jsonpath='{.items[0].metadata.labels.machine\.openshift\.io\/cluster-api-cluster}')
 
+
+
+To grab your cluster cloud region and set it to a local variable run the following:
+
+    cloud_region=$(oc get machinesets -n openshift-machine-api -o jsonpath='{.items[0].spec.template.spec.providerSpec.value.placement.region}')
+
+
+
 OK, now let's roll out our first config. We're going to do this using OpenShift Applier.
 
     git clone <this repo>
     cd operationalizing-openshift-lab
     ansible-galaxy install -r requirements.yml -p galaxy
-    ansible-playbook -i .applier/ galaxy/openshift-applier/playbooks/openshift-cluster-seed.yml -e clusterid=${cluster_id}
+    ansible-playbook -i .applier/ galaxy/openshift-applier/playbooks/openshift-cluster-seed.yml -e clusterid=${cluster_id} -e cloudregion=${cloud_region}
