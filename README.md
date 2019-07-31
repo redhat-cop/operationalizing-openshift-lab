@@ -36,3 +36,38 @@ OK, now let's roll out our first config. We're going to do this using OpenShift 
     cd operationalizing-openshift-lab
     ansible-galaxy install -r requirements.yml -p galaxy
     ansible-playbook -i .applier/ galaxy/openshift-applier/playbooks/openshift-cluster-seed.yml -e clusterid=${cluster_id} -e cloudregion=${cloud_region}
+
+## Iteration 2: LDAP Authentication
+
+OpenShift by default is installed with a default administrative user (called `kubeadmin`). [Identity Providers](https://docs.openshift.com/container-platform/4.1/authentication/understanding-identity-provider.html) can be configured in order to allow other users the ability to login to the cluster. Many organizations manage users using LDAP and OpenShift supports leveraging users defined in LDAP systems through an [LDAP identity provider](https://docs.openshift.com/container-platform/4.1/authentication/identity_providers/configuring-ldap-identity-provider.html).
+
+Security is paramount and OpenShift can be configured to communicate with the LDAP server via secure mechanisms. In order for the OpenShift to trust the LDAP server, a CA certificate must be provided. Obtain the certificate and place it in a file called _ldap.ca_ as it will be referenced later in this section.
+
+Obtain the following values for the LDAP server:
+
+* LDAP Search URL
+    * Used to specify how to connect to the LDAP server as well as define the Base DN to start searching the LDAP tree as well as any LDAP filters.
+* Bind User
+    * User to authenticate against the LDAP instance
+* Bind Password
+    * Password for the user to authenticate against the LDAP instance
+* CA Certificate
+    * Contents of the CA certificate for the LDAP instance
+
+Let's use the OpenShift applier once again to apply the configurations to the cluster:
+
+    ansible-playbook -i .applier/ galaxy/openshift-applier/playbooks/openshift-cluster-seed.yml -e "ldap_ca='$(cat ldap.ca)'" -e ldap_bind_password='${ldap_bind_password}' -e ldap_bind_dn="${ldap_bind_dn}" -e ldap_search_url="${ldap_search_url}" -e include_tags=ldap_auth
+
+_Note: THe use of the `filter_tags` variable allows for a subset of the Applier inventory to be executed._
+
+With the configurations applied, attempt to login with a user defined in the LDAP instance
+
+    oc login -u <user> -p <password>
+
+To login to the web console, locate the URL of the OpenShift web console and navigate to the URL presented
+
+    oc get routes -n openshift-console console -o jsonpath="https://{.spec.host}"
+
+Two login options are displayed. Select _LDAP_ and login with a valid username and password
+
+If you are authenticated using both methods, the confgurations were LDAP authentication was successful.
