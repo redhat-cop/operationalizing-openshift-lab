@@ -1,3 +1,4 @@
+---
 apiVersion: "autoscaling.openshift.io/v1"
 kind: "ClusterAutoscaler"
 metadata:
@@ -13,15 +14,15 @@ spec:
       min: 4
       max: 256
     gpus:
-      - type: nvidia.com/gpu
-        min: 0
-        max: 16
-      - type: amd.com/gpu
-        min: 0
-        max: 4
+    - type: nvidia.com/gpu
+      min: 0
+      max: 16
+    - type: amd.com/gpu
+      min: 0
+      max: 4
   scaleDown:
     enabled: true
     delayAfterAdd: 10m
     delayAfterDelete: 5m
     delayAfterFailure: 30s
-    unneededTime: 60s 
+    unneededTime: 60s
