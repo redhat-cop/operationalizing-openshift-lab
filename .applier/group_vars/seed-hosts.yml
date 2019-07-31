@@ -31,13 +31,13 @@ openshift_cluster_content:
     namespace: openshift-machine-api
 - object: LDAP Cluster Authentication
   content:
-    - name: LDAP Authentication
-      template: "{{ inventory_dir }}/../templates/ldap-auth.yaml"
-      params_from_vars:
-        LDAP_CA: "{{ ldap_ca }}"
-        LDAP_BIND_PASSWORD: "{{ ldap_bind_password }}"
-        LDAP_BIND_DN: "{{ ldap_bind_dn }}"
-        LDAP_SEARCH_URL: "{{ ldap_search_url }}"
-      namespace: openshift-config
-      tags:
-        - ldap_auth
+  - name: LDAP Authentication
+    template: "{{ inventory_dir }}/../templates/ldap-auth.yaml"
+    params_from_vars:
+      LDAP_CA: "{{ ldap_ca }}"
+      LDAP_BIND_PASSWORD: "{{ ldap_bind_password }}"
+      LDAP_BIND_DN: "{{ ldap_bind_dn }}"
+      LDAP_SEARCH_URL: "{{ ldap_search_url }}"
+    namespace: openshift-config
+    tags:
+    - ldap_auth
