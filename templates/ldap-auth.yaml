@@ -1,0 +1,64 @@
+---
+apiVersion: v1
+kind: Template
+objects:
+- apiVersion: v1
+  kind: ConfigMap
+  metadata:
+    name: "${LDAP_CA_CONFIGMAP}"
+    namespace: openshift-config
+  data:
+    ca.crt: "${LDAP_CA}"
+- apiVersion: v1
+  kind: Secret
+  metadata:
+    name: "${BIND_PASSWORD_SECRET}"
+    namespace: openshift-config
+  type: Opaque
+  stringData:
+    bindPassword: "${LDAP_BIND_PASSWORD}"
+- apiVersion: config.openshift.io/v1
+  kind: OAuth
+  metadata:
+    name: cluster
+  spec:
+    identityProviders:
+    - name: LDAP
+      challenge: true
+      login: true
+      mappingMethod: claim
+      type: LDAP
+      ldap:
+        attributes:
+          email: ["mail"]
+          id: ["dn"]
+          name: ["cn"]
+          preferredUsername: ["uid"]
+        bindDN: "${LDAP_BIND_DN}"
+        bindPassword:
+          name: "${BIND_PASSWORD_SECRET}"
+        insecure: false
+        ca:
+          name: "${LDAP_CA_CONFIGMAP}"
+        url: "${LDAP_SEARCH_URL}"
+parameters:
+- name: LDAP_CA_CONFIGMAP
+  description: Name of the ConfigMap containing the LDAP Certificate Authority
+  value: ldap-tls-ca
+  required: true
+- name: LDAP_CA
+  description: "Value of the LDAP Certificate"
+  required: true
+- name: BIND_PASSWORD_SECRET
+  description: Name of the Secret containing the LDAP bind password
+  value: ldap-bind-password
+  required: true
+- name: LDAP_BIND_PASSWORD
+  description: LDAP Bind password
+  required: true
+- name: LDAP_BIND_DN
+  description: LDAP Bind Distinguished Name
+  required: true
+- name: LDAP_SEARCH_URL
+  description: LDAP Search URL
+  required: true
