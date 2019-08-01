@@ -1,0 +1,51 @@
+---
+- name: Get Cluster Info
+  k8s_facts:
+    api_version: config.openshift.io/v1
+    kind: Infrastructure
+    name: cluster
+  register: cluster_info
+
+- name: Get machinesets
+  k8s_facts:
+    api_version: machine.openshift.io/v1beta1
+    kind: MachineSet
+    namespace: openshift-machine-api
+  register: r_get_machinesets
+
+- name: Set default_worker_machinesets
+  set_fact:
+    current_machinesets: >-
+      {{ r_get_machinesets.resources }}
+    current_machineset_names: >-
+      {{ r_get_machinesets.resources
+       | json_query('[].metadata.name')
+      }}
+    default_worker_machinesets: >-
+      {{ r_get_machinesets.resources
+       | json_query(default_worker_machineset_json_query)
+      }}
+  vars:
+    # Base worker machinesets will lack machineset group label
+    default_worker_machineset_json_query: >-
+      [?!contains(keys(metadata.labels), 'some_label')]
+
+- name: Set Cluster Info Facts
+  set_fact:
+    infraid: "{{ cluster_info.resources[0].status.infrastructureName }}"
+    cloudregion: "{{ reference_machineset.spec.template.spec.providerSpec.value.placement.region }}"
+  vars:
+    reference_machineset: >-
+      {{ default_worker_machinesets[0] | default({}) }}
+    reference_provider_spec_value: >-
+      {{ reference_machineset
+       | json_query('spec.template.spec.providerSpec.value')
+      }}
+  when: default_worker_machinesets
+
+- name: Print variables
+  debug:
+    msg: >-
+      Infra: {{ infraid }}
+      Region: {{ cloudregion }}
+    verbosity: 2
