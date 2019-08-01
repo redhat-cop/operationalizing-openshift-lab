@@ -1,4 +1,4 @@
-# How to Apply Infrastructure as Code Principals to OpenShift 4 Operationalization
+# How to Apply Infrastructure as Code Principles to OpenShift 4 Operationalization
 
 In this lab we are going to develop an iterative and declarative approach to taking a new OpenShift Cluster from vanilla to operationalized. This repo should act as a resource for cluster administrators to begin the process of defining clusters as code.
 
