@@ -66,7 +66,7 @@ With the configurations applied, attempt to login with a user defined in the LDA
 
 To login to the web console, locate the URL of the OpenShift web console and navigate to the URL presented
 
-    oc get routes -n openshift-console console -o jsonpath="https://{.spec.host}"
+    oc whoami --show-console
 
 Two login options are displayed. Select _LDAP_ and login with a valid username and password
 
