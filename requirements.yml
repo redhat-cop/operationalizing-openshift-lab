@@ -3,5 +3,5 @@
   version: master
 
 - src: https://github.com/redhat-cop/operationalizing-openshift-lab
-  #name: discovery
+  name: discovery
   version: pre-role-discovery

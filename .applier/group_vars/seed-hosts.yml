@@ -15,7 +15,7 @@ openshift_cluster_content:
 - galaxy_requirements: "{{ inventory_dir }}/../requirements.yml"
 - object: Cluster Autoscaling
   pre_steps:
-    - role: operationalizing-openshift-lab/roles/discover
+    - role: discovery/roles/discover
   content:
   - name: ClusterAutoscaler
     file: "{{ inventory_dir }}/../manifests/clusterautoscaler.yaml"
