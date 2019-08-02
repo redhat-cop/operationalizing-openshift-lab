@@ -2,4 +2,4 @@
 
 - hosts: localhost
   roles:
-    - galaxy/discovery/roles/discover
+    - galaxy/operationalizing-openshift-lab/roles/discover

@@ -1,5 +1,5 @@
 ---
-clusterid: 1234
+infraid: 1234
 cloudregion: 1234
 ldap_ca: certificatecontents
 ldap_bind_password: password

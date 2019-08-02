@@ -1,5 +1,5 @@
 ---
-- src: https://github.com/redhat-cop/openshift-applier
+- src: https://github.com/jkupferer/openshift-applier
   version: master
 
 - src: https://github.com/redhat-cop/operationalizing-openshift-lab

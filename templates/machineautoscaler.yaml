@@ -5,7 +5,7 @@ objects:
 - apiVersion: "autoscaling.openshift.io/v1beta1"
   kind: "MachineAutoscaler"
   metadata:
-    name: "worker-${CLOUD_REGION_ZONE}"
+    name: "${CLUSTER_ID}-worker-${CLOUD_REGION_ZONE}"
     namespace: openshift-machine-api
   spec:
     minReplicas: 1
