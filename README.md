@@ -23,7 +23,7 @@ OK, now let's roll out our first config. We're going to do this using OpenShift 
     git clone <this repo>
     cd operationalizing-openshift-lab
     ansible-galaxy install -r requirements.yml -p galaxy
-    ansible-playbook -i .applier/ galaxy/openshift-applier/playbooks/openshift-cluster-seed.yml -e clusterid=${cluster_id} -e cloudregion=${cloud_region}
+    ansible-playbook -i .applier/ galaxy/openshift-applier/playbooks/openshift-cluster-seed.yml
 
 ## Iteration 2: LDAP
 
