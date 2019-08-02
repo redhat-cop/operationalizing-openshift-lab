@@ -37,7 +37,9 @@ OK, now let's roll out our first config. We're going to do this using OpenShift 
     ansible-galaxy install -r requirements.yml -p galaxy
     ansible-playbook -i .applier/ galaxy/openshift-applier/playbooks/openshift-cluster-seed.yml -e clusterid=${cluster_id} -e cloudregion=${cloud_region}
 
-## Iteration 2: LDAP Authentication
+## Iteration 2: LDAP
+
+### LDAP Authentication
 
 OpenShift by default is installed with a default administrative user (called `kubeadmin`). [Identity Providers](https://docs.openshift.com/container-platform/4.1/authentication/understanding-identity-provider.html) can be configured in order to allow other users the ability to login to the cluster. Many organizations manage users using LDAP and OpenShift supports leveraging users defined in LDAP systems through an [LDAP identity provider](https://docs.openshift.com/container-platform/4.1/authentication/identity_providers/configuring-ldap-identity-provider.html).
 
@@ -58,7 +60,7 @@ Let's use the OpenShift applier once again to apply the configurations to the cl
 
     ansible-playbook -i .applier/ galaxy/openshift-applier/playbooks/openshift-cluster-seed.yml -e "ldap_ca='$(cat ldap.ca)'" -e ldap_bind_password='${ldap_bind_password}' -e ldap_bind_dn="${ldap_bind_dn}" -e ldap_search_url="${ldap_search_url}" -e include_tags=ldap_auth
 
-_Note: THe use of the `filter_tags` variable allows for a subset of the Applier inventory to be executed._
+_Note: The use of the `filter_tags` variable allows for a subset of the Applier inventory to be executed._
 
 With the configurations applied, attempt to login with a user defined in the LDAP instance
 
@@ -71,3 +73,44 @@ To login to the web console, locate the URL of the OpenShift web console and nav
 Two login options are displayed. Select _LDAP_ and login with a valid username and password
 
 If you are authenticated using both methods, the confgurations were LDAP authentication was successful.
+
+### LDAP Group Synchronization
+
+Many organizations that make use of LDAP directory services arrange their users into Groups. This allows Administrators the ability to apply the same set of permissions across multiple users. A similar concept can be applied using OpenShift's Role Based Access (RBAC) facility where multiple users can be organized into groups and roles can be applied. Since OpenShift can make use of users defined in LDAP servers, [groups defined in LDAP can be synchronized into OpenShift](https://docs.openshift.com/container-platform/4.1/authentication/ldap-syncing.html) so that preexisting structures can also be applied.
+
+Since users, groups and their associated membership within the LDAP server changes frequently, it is important that the execution of the group syncrhonization process take place in a routine manner. While a job scheduler could be utilized, such as standalone [cron](https://en.wikipedia.org/wiki/Cron), OpenShift provides the facility to to execute tasks as _Jobs_ along with the repeative exeuction of these jobs in a scheduled manner as a [CronJob](https://docs.openshift.com/container-platform/4.1/nodes/jobs/nodes-nodes-jobs.html). The process of executing the synchronization involves the use of the OpenShift command line tool which can triggered within a _CronJob_. A `LDAPSyncConfig` object defines how to connect to the LDAP instance from OpenShift along with the groups which should be synchronized.
+
+Obtain following items that will be needed for the synchronization process:
+
+* LDAP URL
+    * THe Address of the LDAP Server
+* Bind User (DN)
+    * User to authenticate against the LDAP instance
+* User Search Base
+    * Location for which to start looking for users in the LDAP structure
+* User Search Base
+    * Location for which to start looking for groups in the LDAP structure
+* User White List
+    * Contents of a file containing only the users that should be synchronized
+
+Fortunately, a portion of the required items that are typically needed to be created can be reused from the prior exercise, such as LDAP CA and Bind Password.
+
+First, obtain the contents of the user white list into a file called `whitelist.txt`.
+
+Use the OpenShift applier once again to apply the configurations to the create a service account used to run a _CronJob_ to execute the synchronization process. In addition, policies are also applied in order to provide the service account permissions to make the appropriate modifications within the cluster.
+
+    ansible-playbook -i .applier/ galaxy/openshift-applier/playbooks/openshift-cluster-seed.yml -e "ldap_groups_whitelist='$(cat whitelist)'" -e ldap_groups_search_base='${ldap_groups_search_base}' -e ldap_url="${ldap_url}" -e ldap_bind_dn="${ldap_bind_dn}" -e ldap_users_search_base="${ldap_users_search_base}" -e include_tags=ldap_group_sync
+
+By default, the _CronJob_ is configured to run on an hourly basis. You may ajust the timing by providing the `-e ldap_cron_schedule=${ ldap_cron_schedule }` in cron format.
+
+After the cronjob triggers, check the status of the _Job_.
+
+    oc get jobs
+
+The successful execution of the job will result in the _Completions_ field displaying `1/1`.
+
+Verify LDAP groups have been synchronized into OpenShift
+
+    oc get groups
+
+The prescense of groups and corresponding users indicate the successful completion of this iteration.

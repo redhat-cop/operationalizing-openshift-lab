@@ -4,7 +4,12 @@ cloudregion: 1234
 ldap_ca: certificatecontents
 ldap_bind_password: password
 ldap_bind_dn: uid=admin,cn=users,dc=example,dc=com
-ldap_search_url: ldaps://ldap.example.com
+ldap_url: "ldaps://ldap.example.com:636"
+ldap_search_url: "{{ ldap_url }}/cn=users,dc=example,dc=com?uid?sub?"
+ldap_groups_search_base: cn=groups,dc=example,dc=com
+ldap_users_search_base: cn=users,dc=example,dc=com
+ldap_groups_whitelist: whitelistcontents
+ldap_cron_schedule: "@hourly"
 
 openshift_cluster_content:
 - object: Cluster Autoscaling
@@ -41,3 +46,17 @@ openshift_cluster_content:
     namespace: openshift-config
     tags:
     - ldap_auth
+- object: LDAP Group Synchronization
+  content:
+  - name: LDAP Group Synchronization
+    template: "{{ inventory_dir }}/../templates/ldap-group-sync.yaml"
+    params_from_vars:
+      LDAP_GROUPS_SEARCH_BASE: "{{ ldap_groups_search_base }}"
+      LDAP_BIND_DN: "{{ ldap_bind_dn }}"
+      LDAP_URL: "{{ ldap_url }}"
+      LDAP_USERS_SEARCH_BASE: "{{ ldap_users_search_base }}"
+      LDAP_GROUPS_WHITELIST: "{{ ldap_groups_whitelist }}"
+      SCHEDULE: "{{ ldap_cron_schedule }}"
+    namespace: openshift-config
+    tags:
+    - ldap_group_sync
