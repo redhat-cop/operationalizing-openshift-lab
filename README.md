@@ -16,35 +16,36 @@ Note that the purpose of this lab is not to teach how each of the components wor
 
 Let's get started...
 
-## Iteration 1: Initial rollout of cluster configuration
+## Setting up a Git Ops Workflow
 
-OK, now let's roll out our first config. We're going to do this using OpenShift Applier.
+_Git Ops_ is a form of Infrastructure as Code practice where all of the configurations that define a system are managed in a git repository, and automatically and idempotently applied to that system each time commits are made to the repository. For this lab, we are going to enable such a workflow using an Operator called [Eunomia](https://github.com/KohlsTechnology/eunomia) and [OpenShift Applier](https://github.com/redhat-cop/openshift-applier), and automation framework for OpenShift. Eunomia provides a workflow for watching git repos, triggering actions when new commits are detected. The action, in this case, will be a [Kubernetes Job](https://kubernetes.io/docs/tasks/job/) that executes Applier.
 
-    git clone <this repo>
+Let's go ahead and deploy Eunomia. We can do that via provided helm charts.
+
+    git clone https://github.com/KohlsTechnology/eunomia.git
+    helm template eunomia/deploy/helm/prereqs/ | oc apply -f -
+    helm template eunomia/deploy/helm/operator/ --set openshift.route.enabled=true --set image.name=etsauer/eunomia-operator | oc apply -f -
+
+Now we can set up eunomia to monitor a repo of configs, which in turn will apply configs to set up our cluster. Eunomia provides a CR called a `GitOpsConfig` to set up a monitor on a repository. You can examine the one we're going to use at [templates/cluster-gitops.yaml](templates/cluster-gitops.yaml). Let's use Applier to roll out the config.
+
+    git clone https://github.com/redhat-cop/operationalizing-openshift-lab
     cd operationalizing-openshift-lab
     ansible-galaxy install -r requirements.yml -p galaxy
-    ansible-playbook -i .applier/ galaxy/openshift-applier/playbooks/openshift-cluster-seed.yml
+    ansible-playbook -i .applier/ galaxy/openshift-applier/playbooks/openshift-cluster-seed.yml -e include_tags=gitops
 
-## Iteration 2: LDAP
+This run resulted in a namespace called `cluster-config` with our `GitOpsConfig` in it. From this, Eunomia spins up a job. Let's wait for that job to complete, and then see what we have.
 
-OpenShift by default is installed with a default administrative user (called `kubeadmin`). [Identity Providers](https://docs.openshift.com/container-platform/4.1/authentication/understanding-identity-provider.html) can be configured in order to allow other users the ability to login to the cluster. Many organizations manage users using LDAP and OpenShift supports leveraging users stored in LDAP to authenticate against the cluster as well as synchronize groups and their associated users.
+    oc get jobs -n cluster-config --wait
 
-## Core LDAP Resources
+## Cluster Exploration
 
-Prior to being able to leverage LDAP for authentication and group synchronization, serveral resources must be added to the cluster. Security is paramount and OpenShift can be configured to communicate with the LDAP server via secure mechanisms. In order for the OpenShift to trust the LDAP server, a CA certificate must be provided. Obtain the certificate and place it in a file called _ldap-ca.crt_ as it will be referenced later in this section.
+### MachineSets and AutoScalers
 
-Obtain the following values for the LDAP server:
+When OpenShift gets installed, a _cluster id_ is generated from the `name` passed in the install-config.yaml, as well as a randomized uid that the installer generates. Several resources we are going to apply need that cluster id value, so we'll grab it and set it to a local variable.
 
-* Bind Password
-    * Password for the user to authenticate against the LDAP instance
-* CA Certificate
-    * Contents of the CA certificate for the LDAP instance
+TO BE CONTINUED...
 
-Let's use the OpenShift applier once again to apply the core LDAP resources to the cluster:
-
-    ansible-playbook -i .applier/ galaxy/openshift-applier/playbooks/openshift-cluster-seed.yml -e "ldap_ca='$(cat ldap-ca.crt)'" -e ldap_bind_password='${ldap_bind_password}' -e include_tags=cluster-secrets
-
-_Note: The use of the `filter_tags` variable allows for a subset of the Applier inventory to be executed._
+### Authentication and Authorization
 
 ### LDAP Authentication
 
