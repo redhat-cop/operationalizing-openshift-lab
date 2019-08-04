@@ -34,8 +34,16 @@ openshift_cluster_content:
       CLUSTER_ID: "{{ clusterid }}"
       CLOUD_REGION_ZONE: "{{ cloudregion }}c"
     namespace: openshift-machine-api
-- object: LDAP Cluster Authentication
+- object: LDAP Cluster Secrets
   content:
+  - name: LDAP Secrets
+    template: "{{ inventory_dir }}/../templates/ldap-cluster-secrets.yaml"
+    params_from_vars:
+      LDAP_CA: "{{ ldap_ca }}"
+      LDAP_BIND_PASSWORD: "{{ ldap_bind_password }}"
+    namespace: openshift-config
+    tags:
+    - cluster-secrets
   - name: LDAP Authentication
     template: "{{ inventory_dir }}/../templates/ldap-auth.yaml"
     params_from_vars:

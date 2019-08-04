@@ -39,28 +39,39 @@ OK, now let's roll out our first config. We're going to do this using OpenShift 
 
 ## Iteration 2: LDAP
 
-### LDAP Authentication
+OpenShift by default is installed with a default administrative user (called `kubeadmin`). [Identity Providers](https://docs.openshift.com/container-platform/4.1/authentication/understanding-identity-provider.html) can be configured in order to allow other users the ability to login to the cluster. Many organizations manage users using LDAP and OpenShift supports leveraging users stored in LDAP to authenticate against the cluster as well as synchronize groups and their associated users.
 
-OpenShift by default is installed with a default administrative user (called `kubeadmin`). [Identity Providers](https://docs.openshift.com/container-platform/4.1/authentication/understanding-identity-provider.html) can be configured in order to allow other users the ability to login to the cluster. Many organizations manage users using LDAP and OpenShift supports leveraging users defined in LDAP systems through an [LDAP identity provider](https://docs.openshift.com/container-platform/4.1/authentication/identity_providers/configuring-ldap-identity-provider.html).
+## Core LDAP Resources
 
-Security is paramount and OpenShift can be configured to communicate with the LDAP server via secure mechanisms. In order for the OpenShift to trust the LDAP server, a CA certificate must be provided. Obtain the certificate and place it in a file called _ldap.ca_ as it will be referenced later in this section.
+Prior to being able to leverage LDAP for authentication and group synchronization, serveral resources must be added to the cluster. Security is paramount and OpenShift can be configured to communicate with the LDAP server via secure mechanisms. In order for the OpenShift to trust the LDAP server, a CA certificate must be provided. Obtain the certificate and place it in a file called _ldap-ca.crt_ as it will be referenced later in this section.
 
 Obtain the following values for the LDAP server:
 
-* LDAP Search URL
-    * Used to specify how to connect to the LDAP server as well as define the Base DN to start searching the LDAP tree as well as any LDAP filters.
-* Bind User
-    * User to authenticate against the LDAP instance
 * Bind Password
     * Password for the user to authenticate against the LDAP instance
 * CA Certificate
     * Contents of the CA certificate for the LDAP instance
 
-Let's use the OpenShift applier once again to apply the configurations to the cluster:
+Let's use the OpenShift applier once again to apply the core LDAP resources to the cluster:
 
-    ansible-playbook -i .applier/ galaxy/openshift-applier/playbooks/openshift-cluster-seed.yml -e "ldap_ca='$(cat ldap.ca)'" -e ldap_bind_password='${ldap_bind_password}' -e ldap_bind_dn="${ldap_bind_dn}" -e ldap_search_url="${ldap_search_url}" -e include_tags=ldap_auth
+    ansible-playbook -i .applier/ galaxy/openshift-applier/playbooks/openshift-cluster-seed.yml -e "ldap_ca='$(cat ldap-ca.crt)'" -e ldap_bind_password='${ldap_bind_password}' -e include_tags=cluster-secrets
 
 _Note: The use of the `filter_tags` variable allows for a subset of the Applier inventory to be executed._
+
+### LDAP Authentication
+
+OpenShift provides the capability to authenticate users stored in LDAP systems using the [LDAP identity provider](https://docs.openshift.com/container-platform/4.1/authentication/identity_providers/configuring-ldap-identity-provider.html).
+
+Obtain the following values for the LDAP server:
+
+* LDAP Search URL
+    * Used to specify how to connect to the LDAP server as well as define the Base DN to start searching the LDAP tree as well as any LDAP filters.
+* Bind User (DN)
+    * User to authenticate against the LDAP instance
+
+Apply the configurations to the cluster:
+
+    ansible-playbook -i .applier/ galaxy/openshift-applier/playbooks/openshift-cluster-seed.yml -e ldap_bind_dn="${ldap_bind_dn}" -e ldap_search_url="${ldap_search_url}" -e include_tags=ldap_auth
 
 With the configurations applied, attempt to login with a user defined in the LDAP instance
 
