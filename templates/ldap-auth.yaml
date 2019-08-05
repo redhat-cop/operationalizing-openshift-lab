@@ -2,21 +2,6 @@
 apiVersion: v1
 kind: Template
 objects:
-- apiVersion: v1
-  kind: ConfigMap
-  metadata:
-    name: "${LDAP_CA_CONFIGMAP}"
-    namespace: openshift-config
-  data:
-    ca.crt: "${LDAP_CA}"
-- apiVersion: v1
-  kind: Secret
-  metadata:
-    name: "${BIND_PASSWORD_SECRET}"
-    namespace: openshift-config
-  type: Opaque
-  stringData:
-    bindPassword: "${LDAP_BIND_PASSWORD}"
 - apiVersion: config.openshift.io/v1
   kind: OAuth
   metadata:
@@ -46,15 +31,9 @@ parameters:
   description: Name of the ConfigMap containing the LDAP Certificate Authority
   value: ldap-tls-ca
   required: true
-- name: LDAP_CA
-  description: "Value of the LDAP Certificate"
-  required: true
 - name: BIND_PASSWORD_SECRET
   description: Name of the Secret containing the LDAP bind password
   value: ldap-bind-password
-  required: true
-- name: LDAP_BIND_PASSWORD
-  description: LDAP Bind password
   required: true
 - name: LDAP_BIND_DN
   description: LDAP Bind Distinguished Name
