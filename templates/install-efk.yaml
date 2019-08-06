@@ -1,0 +1,305 @@
+---
+apiVersion: v1
+kind: Template
+objects:
+  - kind: "Namespace"
+    apiVersion: "v1"
+    metadata:
+      name: "${OPENSHIFT_LOGGING_NAMESPACE}"
+      annotations:
+        openshift.io/node-selector: ""
+      labels:
+        openshift.io/cluster-logging: "true"
+        openshift.io/cluster-monitoring: "true"
+  - kind: "Namespace"
+    apiVersion: "v1"
+    metadata:
+      name: "${OPENSHIFT_OPERATORS_REDHAT_NAMESPACE}"
+      annotations:
+        openshift.io/node-selector: ""
+      labels:
+        openshift.io/cluster-logging: "true"
+        openshift.io/cluster-monitoring: "true"
+  - kind: "OperatorGroup"
+    apiVersion: "operators.coreos.com/v1"
+    metadata:
+      name: "${OPENSHIFT_OPERATORS_REDHAT_NAMESPACE}"
+      namespace: "${OPENSHIFT_OPERATORS_REDHAT_NAMESPACE}"
+    spec: {}
+  - kind: "OperatorGroup"
+    apiVersion: "operators.coreos.com/v1"
+    metadata:
+      name: "openshift-logging-ogog"
+      namespace: "${OPENSHIFT_LOGGING_NAMESPACE}"
+    spec:
+      serviceAccount:
+      targetNamespaces:
+      - ${OPENSHIFT_LOGGING_NAMESPACE}
+  - kind: "CatalogSourceConfig"
+    apiVersion: "operators.coreos.com/v1"
+    metadata:
+      name: "elasticsearch"
+      namespace: "${OPENSHIFT_MARKETPLACE}"
+    spec:
+      targetNamespace: "${OPENSHIFT_OPERATORS_REDHAT_NAMESPACE}"
+      packages: "elasticsearch-operator"
+  - kind: "CatalogSourceConfig"
+    apiVersion: "operators.coreos.com/v1"
+    metadata:
+      name: "installed-community-openshift-logging"
+      namespace: "${OPENSHIFT_MARKETPLACE}"
+    spec:
+      targetNamespace: "${OPENSHIFT_LOGGING_NAMESPACE}"
+      packages: "cluster-logging"
+  - kind: "Subscription"
+    apiVersion: "operators.coreos.com/v1alpha1"
+    metadata:
+      name: "elasticsearch-operator"
+      namespace: "${OPENSHIFT_OPERATORS_REDHAT_NAMESPACE}"
+    spec:
+      channel: "${CHANNEL}"
+      installPlanApproval: "Automatic"
+      source: "elasticsearch"
+      sourceNamespace: "${OPENSHIFT_OPERATORS_REDHAT_NAMESPACE}"
+      name: "elasticsearch-operator"
+  - kind: "Role"
+    apiVersion: "rbac.authorization.k8s.io/v1"
+    metadata:
+      name: "prometheus-k8s"
+      namespace: "${OPENSHIFT_OPERATORS_REDHAT_NAMESPACE}"
+    rules:
+    - apiGroups:
+      - ""
+      resources:
+      - "services"
+      - "endpoints"
+      - "pods"
+      verbs:
+      - "get"
+      - "list"
+      - "watch"
+  - kind: "RoleBinding"
+    apiVersion: "rbac.authorization.k8s.io/v1"
+    metadata:
+      name: "prometheus-k8s"
+      namespace: "${OPENSHIFT_OPERATORS_REDHAT_NAMESPACE}"
+    roleRef:
+      apiGroup: "rbac.authorization.k8s.io"
+      kind: "Role"
+      name: "prometheus-k8s"
+    subjects:
+    - kind: "ServiceAccount"
+      name: "prometheus-k8s"
+    namespace: "${OPENSHIFT_OPERATORS_REDHAT_NAMESPACE}"
+  - kind: "Subscription"
+    apiVersion: "operators.coreos.com/v1alpha1"
+    metadata:
+      name: "cluster-logging"
+      namespace: "${OPENSHIFT_LOGGING_NAMESPACE}"
+    spec:
+      channel: "${CHANNEL}"
+      installPlanApproval: "Automatic"
+      source: "installed-community-openshift-logging"
+      sourceNamespace: "${OPENSHIFT_LOGGING_NAMESPACE}"
+      name: "cluster-logging"
+      startingCSV: "${CLV}"
+  - kind: "ClusterLogging"
+    apiVersion: "logging.openshift.io/v1"
+    metadata:
+      name: "instance"
+      namespace: "${OPENSHIFT_LOGGING_NAMESPACE}"
+    spec:
+      managementState: "Managed"
+      logStore:
+        type: "elasticsearch"
+        elasticsearch:
+          resources:
+            limits:
+              cpu: "${ES_CPU_LIMIT}"
+              memory: "${ES_MEMORY_LIMIT}"
+            requests:
+              cpu: "${ES_CPU_REQUEST}"
+              memory: "${ES_MEMORY_REQUEST}"
+          env:
+            - name: INSTANCE_RAM
+              value: "${ES_INSTANCE_RAM}"
+          nodeCount: "${{ES_NODE_COUNT}}"
+          storage:
+            storageClassName: "${ES_STORAGE_CLASS}"
+            size: "${ES_DISK_SIZE}"
+          redundancyPolicy: "${ES_REDUNDANCY}"
+      visualization:
+        type: "kibana"
+        kibana:
+          replicas: "${{KIBANA_REPLICAS}}"
+      curation:
+        type: "curator"
+        curator:
+          schedule: "30 3 * * *"
+      collection:
+        logs:
+          type: "fluentd"
+          fluentd: {}
+  - kind: "ServiceAccount"
+    apiVersion: "v1"
+    metadata:
+      name: "cluster-logging-eventrouter"
+      namespace: "${OPENSHIFT_LOGGING_NAMESPACE}"
+  - kind: "ClusterRole"
+    apiVersion: "rbac.authorization.k8s.io/v1"
+    metadata:
+      name: "event-reader"
+      namespace: "${OPENSHIFT_LOGGING_NAMESPACE}"
+    rules:
+    - apiGroups:
+      - ""
+      resources:
+      - "events"
+      verbs:
+      - "get"
+      - "watch"
+      - "list"
+  - kind: "ClusterRoleBinding"
+    apiVersion: "rbac.authorization.k8s.io/v1"
+    metadata:
+      name: "event-reader-binding"
+    subjects:
+    - kind: "ServiceAccount"
+      name: "cluster-logging-eventrouter"
+      namespace: "${OPENSHIFT_LOGGING_NAMESPACE}"
+    roleRef:
+      kind: "ClusterRole"
+      name: "event-reader"
+  - kind: "ConfigMap"
+    apiVersion: "v1"
+    metadata:
+      name: "cluster-logging-eventrouter"
+      namespace: "${OPENSHIFT_LOGGING_NAMESPACE}"
+    data:
+      config.json: |-
+        {
+          "sink": "stdout"
+        }
+  - kind: "Deployment"
+    apiVersion: "apps/v1"
+    metadata:
+      name: "cluster-logging-eventrouter"
+      namespace: "${OPENSHIFT_LOGGING_NAMESPACE}"
+      labels:
+        component: "eventrouter"
+        logging-infra: "eventrouter"
+        provider: "openshift"
+    spec:
+      selector:
+        matchLabels:
+          component: "eventrouter"
+          logging-infra: "eventrouter"
+          provider: "openshift"
+      replicas: 1
+      template:
+        metadata:
+          labels:
+            component: "eventrouter"
+            logging-infra: "eventrouter"
+            provider: "openshift"
+          name: "cluster-logging-eventrouter"
+        spec:
+          serviceAccount: "cluster-logging-eventrouter"
+          containers:
+            - name: "kube-eventrouter"
+              image: "quay.io/openshift/origin-logging-eventrouter:latest"
+              imagePullPolicy: IfNotPresent
+              resources:
+                limits:
+                  memory: 128Mi
+                requests:
+                  cpu: 100m
+                  memory: 128Mi
+              volumeMounts:
+              - name: config-volume
+                mountPath: /etc/eventrouter
+          volumes:
+            - name: config-volume
+              configMap:
+                name: cluster-logging-eventrouter
+parameters:
+- name: "CHANNEL"
+  displayName: "CHANNEL"
+  description: "Channel were the operators exist."
+  value: "preview"
+  required: true
+- name: "CSV"
+  displayName: "Namespace"
+  description: "Version of the ES operator. Use `oc get packagemanifest elasticsearch-operator -n openshift-marketplace -o jsonpath='{.status.channels[].currentCSV}'` to get the current version."
+  value: "elasticsearch-operator.4.1.4-201906271212'"
+  required: true
+- name: "CLV"
+  displayName: "Cluser Logging Version"
+  description: "Verion of the cluster logger operator. Use `oc get packagemanifest cluster-logging -n openshift-marketplace -o jsonpath='{.status.channels[].currentCSV}'` to get the current version."
+  value: "clusterlogging.4.1.4-201906271212"
+  required: true
+- name: "ES_NODE_COUNT"
+  displayName: "ES Node Count"
+  description: "The number of ElasticSearch nodes to generate."
+  value: "1"
+  required: true
+- name: "ES_DISK_SIZE"
+  displayName: "ES Disk Size"
+  description: "The size of ElasticSearch disk to create."
+  value: "200G"
+  required: true
+- name: "ES_REDUNDANCY"
+  displayName: "ES Redundancy"
+  description: "Type of redundancy for ElasticSearch. Options: FullRedundancy, MultipleRedundancy,(SingleRedundancy),ZeroRedundancy"
+  value: "ZeroRedundancy"
+  required: true
+- name: "ES_STORAGE_CLASS"
+  displayName: "ES Storage Class"
+  description: "The OpenShift StorageClass to use for ES PVs"
+  value: "gp2"
+  required: true
+- name: "ES_CPU_LIMIT"
+  displayName: "ES CPU Limit"
+  description: "ES CPU Limit"
+  value: "1"
+  required: true
+- name: "ES_CPU_REQUEST"
+  displayName: "ES CPU Request"
+  description: "ES CPU Request"
+  value: "500m"
+  required: true
+- name: "ES_MEMORY_LIMIT"
+  displayName: "ES Memory Limit"
+  description: "ES Memory Limit. This may need to be decreased on small scale cluster."
+  value: "16Gi"
+  required: true
+- name: "ES_MEMORY_REQUEST"
+  displayName: "ES Memory Request"
+  description: "ES Memory Request. This may need to be decreased on small scale cluster."
+  value: "16Gi"
+  required: true
+- name: "ES_INSTANCE_RAM"
+  displayName: "ES Instance Ram"
+  description: "ES Instance RAM, this sets the ES ENV variable. This may need to be decreased on small scale cluster."
+  value: "16Gi"
+  required: true
+- name: "KIBANA_REPLICAS"
+  displayName: "Kibana Replicas"
+  description: "Number of Kibana Replicas."
+  value: "1"
+  required: true
+- name: "OPENSHIFT_LOGGING_NAMESPACE"
+  displayName: "OpenShift Logging Namespace"
+  description: "Do not modify this value."
+  value: "openshift-logging"
+  required: true
+- name: "OPENSHIFT_OPERATORS_REDHAT_NAMESPACE"
+  displayName: "OpenShift Operators Red Hat Namespace"
+  description: "Do not modify this value."
+  value: "openshift-operators-redhat"
+  required: true
+- name: "OPENSHIFT_MARKETPLACE"
+  displayName: "OpenShift Marketplace Namespace"
+  description: "Do not modify this value."
+  value: "openshift-marketplace"
+  required: true
