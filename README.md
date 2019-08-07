@@ -18,24 +18,12 @@ Let's get started...
 
 ## Iteration 1: Initial rollout of cluster configuration
 
-When OpenShift gets installed, a _cluster id_ is generated from the `name` passed in the install-config.yaml, as well as a randomized uid that the installer generates. Several resources we are going to apply need that cluster id value, so we'll grab it and set it to a local variable.
-
-    cluster_id=$(oc get machinesets -n openshift-machine-api -o jsonpath='{.items[0].metadata.labels.machine\.openshift\.io\/cluster-api-cluster}')
-
-
-
-To grab your cluster cloud region and set it to a local variable run the following:
-
-    cloud_region=$(oc get machinesets -n openshift-machine-api -o jsonpath='{.items[0].spec.template.spec.providerSpec.value.placement.region}')
-
-
-
 OK, now let's roll out our first config. We're going to do this using OpenShift Applier.
 
     git clone <this repo>
     cd operationalizing-openshift-lab
     ansible-galaxy install -r requirements.yml -p galaxy
-    ansible-playbook -i .applier/ galaxy/openshift-applier/playbooks/openshift-cluster-seed.yml -e clusterid=${cluster_id} -e cloudregion=${cloud_region}
+    ansible-playbook -i .applier/ galaxy/openshift-applier/playbooks/openshift-cluster-seed.yml
 
 ## Iteration 2: LDAP
 
@@ -85,6 +73,7 @@ Two login options are displayed. Select _LDAP_ and login with a valid username a
 
 If you are authenticated using both methods, the confgurations were LDAP authentication was successful.
 
+
 ### LDAP Group Synchronization
 
 Many organizations that make use of LDAP directory services arrange their users into Groups. This allows Administrators the ability to apply the same set of permissions across multiple users. A similar concept can be applied using OpenShift's Role Based Access (RBAC) facility where multiple users can be organized into groups and roles can be applied. Since OpenShift can make use of users defined in LDAP servers, [groups defined in LDAP can be synchronized into OpenShift](https://docs.openshift.com/container-platform/4.1/authentication/ldap-syncing.html) so that preexisting structures can also be applied.
@@ -125,3 +114,8 @@ Verify LDAP groups have been synchronized into OpenShift
     oc get groups
 
 The prescense of groups and corresponding users indicate the successful completion of this iteration.
+## Iteration 3: Cluster Exploration
+
+When OpenShift gets installed, a _cluster id_ is generated from the `name` passed in the install-config.yaml, as well as a randomized uid that the installer generates. Several resources we are going to apply need that cluster id value, so we'll grab it and set it to a local variable.
+
+TO BE CONTINUED...
