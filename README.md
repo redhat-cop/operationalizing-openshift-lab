@@ -24,7 +24,7 @@ Let's go ahead and deploy Eunomia. We can do that via provided helm charts.
 
     git clone https://github.com/KohlsTechnology/eunomia.git
     helm template eunomia/deploy/helm/prereqs/ | oc apply -f -
-    helm template eunomia/deploy/helm/operator/ --set openshift.route.enabled=true --set image.name=etsauer/eunomia-operator | oc apply -f -
+    helm template eunomia/deploy/helm/operator/ --set openshift.route.enabled=true | oc apply -f -
 
 Now we can set up eunomia to monitor a repo of configs, which in turn will apply configs to set up our cluster. Eunomia provides a CR called a `GitOpsConfig` to set up a monitor on a repository. You can examine the one we're going to use at [templates/cluster-gitops.yaml](templates/cluster-gitops.yaml). Let's use Applier to roll out the config.
 
