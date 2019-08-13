@@ -113,6 +113,12 @@ objects:
       logStore:
         type: "elasticsearch"
         elasticsearch:
+          nodeSelector:
+            "${ES_NODE_LABEL}": ""
+          tolerations:
+          - key: "${ES_NODE_LABEL}"
+            operator: Exists
+            effect: NoSchedule
           resources:
             limits:
               cpu: "${ES_CPU_LIMIT}"
@@ -302,4 +308,9 @@ parameters:
   displayName: "OpenShift Marketplace Namespace"
   description: "Do not modify this value."
   value: "openshift-marketplace"
+  required: true
+- name: "ES_NODE_LABEL"
+  displayName: "ES Node Label"
+  description: "Node label used to schedule the ES pod(s)"
+  value: "node-role.kubernetes.io/worker"
   required: true
