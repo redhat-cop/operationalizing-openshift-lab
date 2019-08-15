@@ -114,9 +114,9 @@ objects:
         type: "elasticsearch"
         elasticsearch:
           nodeSelector:
-            "${ES_NODE_LABEL}": ""
+            "${NODE_LABEL}": ""
           tolerations:
-          - key: "${ES_NODE_LABEL}"
+          - key: "${NODE_LABEL}"
             operator: Exists
             effect: NoSchedule
           resources:
@@ -138,14 +138,20 @@ objects:
         type: "kibana"
         kibana:
           replicas: "${{KIBANA_REPLICAS}}"
+          nodeSelector:
+            "${NODE_LABEL}": ""
       curation:
         type: "curator"
         curator:
           schedule: "30 3 * * *"
+          nodeSelector:
+            "${NODE_LABEL}": ""
       collection:
         logs:
           type: "fluentd"
           fluentd: {}
+          nodeSelector:
+            "${NODE_LABEL}": ""
   - kind: "ServiceAccount"
     apiVersion: "v1"
     metadata:
@@ -309,8 +315,8 @@ parameters:
   description: "Do not modify this value."
   value: "openshift-marketplace"
   required: true
-- name: "ES_NODE_LABEL"
-  displayName: "ES Node Label"
+- name: "NODE_LABEL"
+  displayName: "Custom Node Label"
   description: "Node label used to schedule the ES pod(s)"
   value: "node-role.kubernetes.io/worker"
   required: true
