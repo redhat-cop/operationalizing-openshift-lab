@@ -30,7 +30,7 @@ objects:
     apiVersion: storage.k8s.io/v1
     metadata:
       annotations:
-        storageclass.beta.kubernetes.io/is-default-class: "false"
+        storageclass.beta.kubernetes.io/is-default-class: "true"
       name: slow-block
     parameters:
       encrypted: "${ENCRYPT_STORAGE}"
@@ -42,6 +42,6 @@ objects:
 parameters:
 - name: "ENCRYPT_STORAGE"
   displayName: "Encrypt Storage"
-  description: "	Denotes whether to encrypt the EBS volume."
+  description: "Denotes whether to encrypt the EBS volume."
   value: "true"
   required: true
