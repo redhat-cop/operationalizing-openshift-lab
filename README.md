@@ -35,7 +35,7 @@ Now we can set up eunomia to monitor a repo of configs, which in turn will apply
 
 This run resulted in a namespace called `cluster-config` with our `GitOpsConfig` in it. From this, Eunomia spins up a job. Let's wait for that job to complete, and then see what we have.
 
-    oc get jobs -n cluster-config --wait
+    oc get jobs -n cluster-config --watch
 
 ## Cluster Exploration
 
