@@ -35,7 +35,17 @@ Now we can set up eunomia to monitor a repo of configs, which in turn will apply
 
 This run resulted in a namespace called `cluster-config` with our `GitOpsConfig` in it. From this, Eunomia spins up a job. Let's wait for that job to complete, and then see what we have.
 
-    oc get jobs -n cluster-config --watch
+    oc get jobs -n cluster-config
+
+You should see one job created in this namespace. To follow the progress of the job, we need to find the pod running the job.
+
+    oc get pods -n cluster-config
+
+We should see that there is a pod running. Let's tail the logs of that pod.
+
+    oc logs -f gitopsconfig-cluster-config-2bromv-wks8d -n cluster-config
+
+From this we should see that there is an OpenShift Applier playbook running. This will roll out the rest of the configurations stored in this repo. Once that job completes successfully, we can explore what has been set up for us.
 
 ## Cluster Exploration
 

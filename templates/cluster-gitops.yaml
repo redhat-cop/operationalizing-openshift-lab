@@ -6,6 +6,23 @@ objects:
   kind: Namespace
   metadata:
     name: cluster-config
+- apiVersion: v1
+  kind: ServiceAccount
+  metadata:
+    name: eunomia-runner
+    namespace: ${CLUSTER_CONFIG_NAMESPACE}
+- apiVersion: rbac.authorization.k8s.io/v1
+  kind: ClusterRoleBinding
+  metadata:
+    name: eunomia-runner-binding
+  roleRef:
+    apiGroup: rbac.authorization.k8s.io
+    kind: ClusterRole
+    name: cluster-admin
+  subjects:
+  - kind: ServiceAccount
+    name: eunomia-runner
+    namespace: ${CLUSTER_CONFIG_NAMESPACE}
 - apiVersion: eunomia.kohls.io/v1alpha1
   kind: GitOpsConfig
   metadata:
@@ -24,22 +41,6 @@ objects:
     templateProcessorImage: ${TEMPLATE_PROCESSOR_IMAGE}
     resourceHandlingMode: None
     resourceDeletionMode: None
-- apiVersion: v1
-  kind: ServiceAccount
-  metadata:
-    name: eunomia-runner
-- apiVersion: rbac.authorization.k8s.io/v1
-  kind: ClusterRoleBinding
-  metadata:
-    name: eunomia-runner-binding
-  roleRef:
-    apiGroup: rbac.authorization.k8s.io
-    kind: ClusterRole
-    name: cluster-admin
-  subjects:
-  - kind: ServiceAccount
-    name: eunomia-runner
-    namespace: ${CLUSTER_CONFIG_NAMESPACE}
 parameters:
   - name: CLUSTER_CONFIG_NAMESPACE
     value: cluster-config
