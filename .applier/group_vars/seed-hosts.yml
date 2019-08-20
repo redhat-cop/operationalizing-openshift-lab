@@ -10,6 +10,7 @@ ldap_groups_search_base: cn=groups,dc=example,dc=com
 ldap_users_search_base: cn=users,dc=example,dc=com
 ldap_groups_whitelist: whitelistcontents
 ldap_cron_schedule: "@hourly"
+aws_sc_encrypt_storage: "true"
 
 openshift_cluster_content:
 - object: Cluster Autoscaling
@@ -68,3 +69,10 @@ openshift_cluster_content:
     namespace: openshift-config
     tags:
     - ldap_group_sync
+- object: Setup AWS StorageClasses
+  content:
+  - name: Setup AWS StorageClasses
+    template: "{{ inventory_dir }}/../templates/aws-ebs-storage-classes.yaml"
+    params_from_vars:
+      ENCRYPT_STORAGE: "{{ aws_sc_encrypt_storage }}"
+    namespace: openshift-config
