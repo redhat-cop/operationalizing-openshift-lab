@@ -1,0 +1,47 @@
+---
+apiVersion: v1
+kind: Template
+objects:
+  - kind: StorageClass
+    apiVersion: storage.k8s.io/v1
+    metadata:
+      annotations:
+        storageclass.beta.kubernetes.io/is-default-class: "false"
+      name: fast-block
+    parameters:
+      encrypted: "${ENCRYPT_STORAGE}"
+      type: io1
+    provisioner: kubernetes.io/aws-ebs
+    reclaimPolicy: Delete
+    volumeBindingMode: Immediate
+  - kind: StorageClass
+    apiVersion: storage.k8s.io/v1
+    metadata:
+      annotations:
+        storageclass.beta.kubernetes.io/is-default-class: "false"
+      name: medium-block
+    parameters:
+      encrypted: "${ENCRYPT_STORAGE}"
+      type: gp2
+    provisioner: kubernetes.io/aws-ebs
+    reclaimPolicy: Delete
+    volumeBindingMode: Immediate
+  - kind: StorageClass
+    apiVersion: storage.k8s.io/v1
+    metadata:
+      annotations:
+        storageclass.beta.kubernetes.io/is-default-class: "true"
+      name: slow-block
+    parameters:
+      encrypted: "${ENCRYPT_STORAGE}"
+      type: st1
+    provisioner: kubernetes.io/aws-ebs
+    reclaimPolicy: Delete
+    volumeBindingMode: Immediate
+
+parameters:
+- name: "ENCRYPT_STORAGE"
+  displayName: "Encrypt Storage"
+  description: "Denotes whether to encrypt the EBS volume."
+  value: "true"
+  required: true
