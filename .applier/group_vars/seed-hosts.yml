@@ -1,5 +1,5 @@
 ---
-clusterid: 1234
+infraid: 1234
 cloudregion: 1234
 ldap_ca: certificatecontents
 ldap_bind_password: password
@@ -13,26 +13,29 @@ ldap_cron_schedule: "@hourly"
 aws_sc_encrypt_storage: "true"
 
 openshift_cluster_content:
+- galaxy_requirements: "{{ inventory_dir }}/../requirements.yml"
 - object: Cluster Autoscaling
+  pre_steps:
+    - role: discovery/roles/discover
   content:
   - name: ClusterAutoscaler
     file: "{{ inventory_dir }}/../manifests/clusterautoscaler.yaml"
   - name: MachineAutoscaler zone a
     template: "{{ inventory_dir }}/../templates/machineautoscaler.yaml"
     params_from_vars:
-      CLUSTER_ID: "{{ clusterid }}"
+      CLUSTER_ID: "{{ infraid }}"
       CLOUD_REGION_ZONE: "{{ cloudregion }}a"
     namespace: openshift-machine-api
   - name: MachineAutoscaler zone b
     template: "{{ inventory_dir }}/../templates/machineautoscaler.yaml"
     params_from_vars:
-      CLUSTER_ID: "{{ clusterid }}"
+      CLUSTER_ID: "{{ infraid }}"
       CLOUD_REGION_ZONE: "{{ cloudregion }}b"
     namespace: openshift-machine-api
   - name: MachineAutoscaler zone c
     template: "{{ inventory_dir }}/../templates/machineautoscaler.yaml"
     params_from_vars:
-      CLUSTER_ID: "{{ clusterid }}"
+      CLUSTER_ID: "{{ infraid }}"
       CLOUD_REGION_ZONE: "{{ cloudregion }}c"
     namespace: openshift-machine-api
 - object: LDAP Cluster Secrets
