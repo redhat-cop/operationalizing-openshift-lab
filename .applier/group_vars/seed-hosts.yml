@@ -1,4 +1,5 @@
 ---
+include_tags: managed
 infraid: 1234
 cloudregion: 1234
 ldap_ca: certificatecontents
@@ -14,30 +15,47 @@ aws_sc_encrypt_storage: "true"
 
 openshift_cluster_content:
 - galaxy_requirements: "{{ inventory_dir }}/../requirements.yml"
-- object: Cluster Autoscaling
+- object: Setup and Discovery
   pre_steps:
-    - role: discovery/roles/discover
+  - role: discovery/roles/discover
+  content:
+  - name: GitOps Config
+    template: "{{ inventory_dir }}/../templates/cluster-gitops.yaml"
+    params_from_vars:
+      CLUSTER_CONFIG_REPO_REF: pre-role-discovery
+      TEMPLATE_PROCESSOR_IMAGE: quay.io/etsauer/eunomia-applier:latest
+    tags:
+    - gitops
+- object: Cluster Autoscaling
   content:
   - name: ClusterAutoscaler
     file: "{{ inventory_dir }}/../manifests/clusterautoscaler.yaml"
+    tags:
+      - managed
   - name: MachineAutoscaler zone a
     template: "{{ inventory_dir }}/../templates/machineautoscaler.yaml"
     params_from_vars:
       CLUSTER_ID: "{{ infraid }}"
       CLOUD_REGION_ZONE: "{{ cloudregion }}a"
     namespace: openshift-machine-api
+    tags:
+      - managed
   - name: MachineAutoscaler zone b
     template: "{{ inventory_dir }}/../templates/machineautoscaler.yaml"
     params_from_vars:
       CLUSTER_ID: "{{ infraid }}"
       CLOUD_REGION_ZONE: "{{ cloudregion }}b"
     namespace: openshift-machine-api
+    tags:
+      - managed
   - name: MachineAutoscaler zone c
     template: "{{ inventory_dir }}/../templates/machineautoscaler.yaml"
     params_from_vars:
       CLUSTER_ID: "{{ infraid }}"
       CLOUD_REGION_ZONE: "{{ cloudregion }}c"
     namespace: openshift-machine-api
+    tags:
+      - managed
 - object: LDAP Cluster Secrets
   content:
   - name: LDAP Secrets
@@ -58,6 +76,7 @@ openshift_cluster_content:
     namespace: openshift-config
     tags:
     - ldap_auth
+    - managed
 - object: LDAP Group Synchronization
   content:
   - name: LDAP Group Synchronization
@@ -72,6 +91,7 @@ openshift_cluster_content:
     namespace: openshift-config
     tags:
     - ldap_group_sync
+    - managed
 - object: Setup AWS StorageClasses
   content:
   - name: Setup AWS StorageClasses
