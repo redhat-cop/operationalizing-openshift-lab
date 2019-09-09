@@ -1,0 +1,314 @@
+= Operationalizing Openshift
+
+== Lab Overview
+
+This lab teaches a maintainable strategy for OpenShift cluster management from manual configuration to self-managing clusters using operators.
+
+=== The Challenge of OpenShift Management at Scale
+
+Managing configuration as code while keeping it maintainable. Too often the code required to manage your clusters ends up obscuring the configuration details.
+
+=== Configuration Objective
+
+* LDAP Authentication
+* OpenShift group synchronization with LDAP
+* Configuration of ClusterRoles and ClusterRoleBindings
+* Configuration of the OpenShift machine API with custom node types
+
+=== Strategy
+
+* Manual configuration and validation
+* Create reusable templates
+* Automate configuration leveraging your templates
+
+== LDAP Authentication Configuration
+
+=== Manual Configuration
+
+OpenShift LDAP authentication is configured through identity providers within the `oauths.openshift.config.io` custom resource named `cluster` as well as a config map to store the LDAP server TLS certificate authority and a secret for the LDAP bind password. Documentation on LDAP identity provider configuration can be found at:
+
+https://docs.openshift.com/container-platform/4.1/authentication/identity_providers/configuring-ldap-identity-provider.html
+
+Following the same configuration as is used in the "Red Hat OpenShift Container Platform 4 Configuration" course we arrive at the following configuration:
+
+--------------------------------------------------------------------------------
+apiVersion: config.openshift.io/v1
+kind: OAuth
+metadata:
+  name: cluster
+spec:
+  identityProviders:
+  - name: LDAP
+    challenge: true
+    login: true
+    mappingMethod: claim
+    type: LDAP
+    ldap:
+      attributes:
+        email: ['mail']
+        id: ['dn']
+        name: ['cn']
+        preferredUsername: ['uid']
+      bindDN: uid=admin,cn=users,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com
+      bindPassword:
+        name: ldap-bind-password
+      ca:
+        name: ldap-tls-ca
+      insecure: false
+      url: ldap://ipa.shared.example.opentlc.com/cn=users,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com?uid?sub?(memberOf=cn=ocp-users,cn=groups,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com)
+--------------------------------------------------------------------------------
+
+Copy this YAML to a file `oauth-config.yaml` and use the `oc apply` command to create:
+
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ *oc apply -f oauth-config.yaml*
+--------------------------------------------------------------------------------
+
+NOTE: The `oc apply` command records the applied resource definition in the resource annotations.
+This allows subsequent calls to apply to identify not just what configuration to add, but also what to remove. This is only effective, however, if the resource is only managed by the apply command.
+
+Download the LDAP TLS certificate authority using:
+
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ *curl http://ipa.shared.example.opentlc.com/ipa/config/ca.crt -o ldap-ca.crt*
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+100  1350  100  1350    0     0   4130      0 --:--:-- --:--:-- --:--:--  4141
+--------------------------------------------------------------------------------
+
+Create the config map from the file:
+
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ *oc create configmap -n openshift-config ldap-tls-ca --from-file=ca.crt=ldap-ca.crt*
+configmap/ldap-tls-ca created
+--------------------------------------------------------------------------------
+
+But wait! We just noted the importance of using `oc apply` to manage resources. Let`s pull the resource definition and do it right:
+
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ *oc get configmap -n openshift-config ldap-tls-ca -o yaml >ldap-tls-ca.yaml*
+--------------------------------------------------------------------------------
+
+Next edit the `ldap-tls-ca.yaml` file and tidy it up, removing all of the metadata except the `name` and `namespace`:
+
+--------------------------------------------------------------------------------
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ldap-tls-ca
+  namespace: openshift-config
+data:
+  ca.crt: |
+    -----BEGIN CERTIFICATE-----
+    MIIDuDCCAqCgAwIBAgIBATANBgkqhkiG9w0BAQsFADBFMSMwIQYDVQQKDBpTSEFS
+    RUQuRVhBTVBMRS5PUEVOVExDLkNPTTEeMBwGA1UEAwwVQ2VydGlmaWNhdGUgQXV0
+    aG9yaXR5MB4XDTE5MDMxODE5NTMxOVoXDTM5MDMxODE5NTMxOVowRTEjMCEGA1UE
+    CgwaU0hBUkVELkVYQU1QTEUuT1BFTlRMQy5DT00xHjAcBgNVBAMMFUNlcnRpZmlj
+    YXRlIEF1dGhvcml0eTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBALXq
+    ySmgg0M0qQgO9vzX3bZ1kyWgKtBBCfQMCh399hkJxpIKfg1ngvj51nxrrQj7mUPQ
+    EPU+SyjuNk8kN7gSx//sYL60iDlSscgAM49YMtih8nDZmiZawlDV5qMtK/H8/sjP
+    RuJXkk+6eIUux56AwHOsqATvtYCb7hAjSLBdBC2Oj4ScE0iMDGrzY87+lUUnpeSV
+    XD85pg1HG9PGcRziQsioOYNVxiPvoM+vUU5vRr0iZ14dr68t78mkqTUOIJ7R9fdk
+    3K1bLxeHYhnBTVK9ZW/hvNepNSm/1HCP/ks+CqiQEIE6qGQ2ZNa5Yf7fglSmcgQx
+    mBsrKFirXXZOuil2QJkCAwEAAaOBsjCBrzAfBgNVHSMEGDAWgBTTd++t3lLd8ced
+    oDDARqo3FhA9czAPBgNVHRMBAf8EBTADAQH/MA4GA1UdDwEB/wQEAwIBxjAdBgNV
+    HQ4EFgQU03fvrd5S3fHHnaAwwEaqNxYQPXMwTAYIKwYBBQUHAQEEQDA+MDwGCCsG
+    AQUFBzABhjBodHRwOi8vaXBhLWNhLnNoYXJlZC5leGFtcGxlLm9wZW50bGMuY29t
+    L2NhL29jc3AwDQYJKoZIhvcNAQELBQADggEBABvQ23mqob3C0HE02FkUcf4BIift
+    q6gWo0qlxbtTIZ5aMZPw0V/Rw/kOfI7fZROrWVriwp9wjnYlarvDpE8SowuqOjss
+    Y/T/+lCF0TOYkMTRVoylWNstdmRpcRca+kDwlllVhkVtueMBfEt9UCd7XdpIsj/P
+    w+dT3bK6+7xow2m7g0WIQ/67takZRqQdKjwzTGExg7mFrXAcP/n1bpXkcI+7lNE+
+    iIDgQ1bLrgLWjf1adD46QiTLn8TF2yJO9r4PEpjUG8dm9vFWLtRHVLGThg99rro1
+    h4+oKAHzWWWREt5LZ0tvxklQzR+J18XGBApZrxPbjXw+acQlrNi4H1YxWak=
+    -----END CERTIFICATE-----
+--------------------------------------------------------------------------------
+
+Now apply the cleaned up resource definition: 
+
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ *oc apply -f ldap-tls-ca.configmap.yaml*
+Warning: oc apply should be used on resource created by either oc create --save-config or oc apply
+configmap/ldap-tls-ca configured
+--------------------------------------------------------------------------------
+
+NOTE: We receive a warning from `oc apply` because we initially created the config map without apply. The resource definition is not much more complicated than 
+
+Now we need to create the secret for the LDAP bind password. The LDAP bind password will be provided during the lab. If you are following along on your own then you can find the password in the authentication module of the "Red Hat OpenShift Container Platform 4 Configuration" course in the learning management system.
+
+Rather than use the `oc create secret` command, let's jump right to doing it the right way this time with `oc apply`. The secret can be defined using the YAML template below, replacing `${LDAP_BIND_PASSWORD}` with the password provided:
+
+--------------------------------------------------------------------------------
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ldap-bind-password
+  namespace: openshift-config
+type: Opaque
+stringData:
+  bindPassword: "${LDAP_BIND_PASSWORD}"
+--------------------------------------------------------------------------------
+
+Finally test out the login using the web console. The web console for OpenShift 4 clusters can be retrieved with:
+
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ *oc whoami --show-console*
+https://console-openshift-console.apps.cluster.sandbox.example.com
+--------------------------------------------------------------------------------
+
+The usernames `karla` or `andrew` can be tested using the same password used for LDAP bind.
+
+=== Migration to Templates
+
+Now that we have a working configuration, our next step is to make it easier to reproduce, manage, and update. The key strategy for this is templating. There are a number of templating tools available including Jinja2 templates processed by Ansible, Helm charts, and the OpenShift native templates processed by `oc process`.
+
+OpenShift templates are a good choice because they are easy to learn and understand and require no additional software to use. Documentation on OpenShift templates can be found at:
+
+https://docs.openshift.com/container-platform/4.1/openshift_images/using-templates.html
+
+Templates have already been created for this lab by the Red Hat Containers Community of Practice and can be retrieved from GitHub with `git clone`:
+
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ *git clone https://github.com/redhat-cop/operationalizing-openshift-lab.git*
+Cloning into 'operationalizing-openshift-lab'...
+remote: Enumerating objects: 10, done.
+remote: Counting objects: 100% (10/10), done.
+remote: Compressing objects: 100% (9/9), done.
+remote: Total 179 (delta 0), reused 3 (delta 0), pack-reused 169
+Receiving objects: 100% (179/179), 41.32 KiB | 641.00 KiB/s, done.
+Resolving deltas: 100% (59/59), done.
+--------------------------------------------------------------------------------
+
+After cloning the git repository, change directory into the `operationalizing-openshift-lab` directory and inspect the `ldap-auth.yaml` template.
+
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ *cd operationalizing-openshift-lab*
+$ *cat templates/ldap-auth.yaml*
+---
+apiVersion: v1
+kind: Template
+objects:
+- apiVersion: config.openshift.io/v1
+  kind: OAuth
+  metadata:
+    name: cluster
+  spec:
+    identityProviders:
+    - name: LDAP
+      challenge: true
+      login: true
+      mappingMethod: claim
+      type: LDAP
+      ldap:
+        attributes:
+          email: ["mail"]
+          id: ["dn"]
+          name: ["cn"]
+          preferredUsername: ["uid"]
+        bindDN: "${LDAP_BIND_DN}"
+        bindPassword:
+          name: "${BIND_PASSWORD_SECRET}"
+        insecure: false
+        ca:
+          name: "${LDAP_CA_CONFIGMAP}"
+        url: "${LDAP_SEARCH_URL}"
+parameters:
+- name: LDAP_CA_CONFIGMAP
+  description: Name of the ConfigMap containing the LDAP Certificate Authority
+  value: ldap-tls-ca
+  required: true
+- name: BIND_PASSWORD_SECRET
+  description: Name of the Secret containing the LDAP bind password
+  value: ldap-bind-password
+  required: true
+- name: LDAP_BIND_DN
+  description: LDAP Bind Distinguished Name
+  required: true
+- name: LDAP_SEARCH_URL
+  description: LDAP Search URL
+  required: true
+--------------------------------------------------------------------------------
+
+This simple template contains a single object with parameters for commonly configured settings. Other options which are expected to be the same across all managed clusters may be left hard coded or provided with default values as shown for `LDAP_CA_CONFIGMAP` and `BIND_PASSWORD_SECRET` as shown in this example. Note that the parameters `LDAP_BIND_DN` and `LDAP_SEARCH_URL` are required and have no default value and so must be provided whenever this template is processed.
+
+Processing the `ldap-auth.yaml` template produces the same resource definition we provided manually when the same values are provided for `LDAP_BIND_DN` and `LDAP_SEARCH_URL`:
+
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ *oc process -f templates/ldap-auth.yaml \
+  -p LDAP_BIND_DN='uid=admin,cn=users,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com' \
+  -p LDAP_SEARCH_URL='ldap://ipa.shared.example.opentlc.com/cn=users,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com?uid?sub?(memberOf=cn=ocp-users,cn=groups,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com)' \
+  -o yaml*
+warning: --param no longer accepts comma-separated lists of values. "LDAP_BIND_DN=uid=admin,cn=users,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com" will be treated as a single key-value pair.
+warning: --param no longer accepts comma-separated lists of values. "LDAP_SEARCH_URL=ldap://ipa.shared.example.opentlc.com/cn=users,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com?uid?sub?(memberOf=cn=ocp-users,cn=groups,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com)" will be treated as a single key-value pair.
+apiVersion: v1
+items:
+- apiVersion: config.openshift.io/v1
+  kind: OAuth
+  metadata:
+    name: cluster
+  spec:
+    identityProviders:
+    - challenge: true
+      ldap:
+        attributes:
+          email:
+          - mail
+          id:
+          - dn
+          name:
+          - cn
+          preferredUsername:
+          - uid
+        bindDN: uid=admin,cn=users,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com
+        bindPassword:
+          name: ldap-bind-password
+        ca:
+          name: ldap-tls-ca
+        insecure: false
+        url: ldap://ipa.shared.example.opentlc.com/cn=users,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com?uid?sub?(memberOf=cn=ocp-users,cn=groups,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com)
+      login: true
+      mappingMethod: claim
+      name: LDAP
+      type: LDAP
+kind: List
+metadata: {}
+--------------------------------------------------------------------------------
+
+NOTE: The errors regarding "comma-separated lists" should be ignored.
+
+To apply this resource definition to the cluster, we just pipe the generated resource definition to `oc apply -f -` (the option `-f -` tells `oc apply` to read its input from standard input, the output of `oc process`).
+
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ *oc process -f templates/ldap-auth.yaml \
+  -p LDAP_BIND_DN='uid=admin,cn=users,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com' \
+  -p LDAP_SEARCH_URL='ldap://ipa.shared.example.opentlc.com/cn=users,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com?uid?sub?(memberOf=cn=ocp-users,cn=groups,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com)' \
+  -o yaml | oc apply -f -*
+warning: --param no longer accepts comma-separated lists of values. "LDAP_BIND_DN=uid=admin,cn=users,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com" will be treated as a single key-value pair.
+warning: --param no longer accepts comma-separated lists of values. "LDAP_SEARCH_URL=ldap://ipa.shared.example.opentlc.com/cn=users,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com?uid?sub?(memberOf=cn=ocp-users,cn=groups,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com)" will be treated as a single key-value pair.
+oauth.config.openshift.io/cluster unchanged
+--------------------------------------------------------------------------------
+
+You have now gone from manual configuration to template creation, then processing your template to configure your cluster. The next step in making this a fully automated cluster management strategy will be managing your templates and parameters with a tool to apply these changes for you... but let's finish our LDAP configuration first with LDAP groups.
+
+== LDAP Group Sync Configuration
+
+// FIXME
+
+=== Template First Configuration
+
+// FIXME
+
+== OpenShift Applier
+
+// FIXME
+
+== Running OpenShift Applier with Eunomia Operator
