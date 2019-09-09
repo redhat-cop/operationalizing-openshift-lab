@@ -297,15 +297,114 @@ warning: --param no longer accepts comma-separated lists of values. "LDAP_SEARCH
 oauth.config.openshift.io/cluster unchanged
 --------------------------------------------------------------------------------
 
+// FIXME - Also document configmap and secret with templates
+
 You have now gone from manual configuration to template creation, then processing your template to configure your cluster. The next step in making this a fully automated cluster management strategy will be managing your templates and parameters with a tool to apply these changes for you... but let's finish our LDAP configuration first with LDAP groups.
 
 == LDAP Group Sync Configuration
 
-// FIXME
+LDAP group synchronization is currently not automated within the platform itself, but is instead a feature of the `oc adm groups` command set. To synchronize OpenShift groups to LDAP groups, you run the `oc adm groups sync` command with configuration files. While you could run this command from anywhere, running it as a container within the cluster using a cron job resource type is a natural choice.
 
-=== Template First Configuration
+Documentation on LDAP group syncing can be found here:
 
-// FIXME
+https://docs.openshift.com/container-platform/4.1/authentication/ldap-syncing.html
+
+
+=== Running Group Sync
+
+LDAP group sync configuration is provided below. Detailed instructions and explanation on the group sync configuration used here is found in the "Red Hat OpenShift Container Platform 4 Configuration" course group management module.
+
+Create a file, `groupsync.yaml` with the contents shown below:
+
+--------------------------------------------------------------------------------
+kind: "LDAPSyncConfig"
+apiVersion: "v1"
+url: "ldap://ipa.shared.example.opentlc.com"
+insecure: false
+bindDN: "uid=admin,cn=users,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com"
+bindPassword: "r3dh4t1!"
+ca: "ipa-ca.crt"
+rfc2307:
+  groupsQuery:
+    baseDN: "cn=groups,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com"
+    derefAliases: "never"
+    filter: "(objectClass=groupofnames)"
+  groupUIDAttribute: "dn"
+  groupNameAttributes: ["cn"]
+  groupMembershipAttributes: ["member"]
+  usersQuery:
+    baseDN: "cn=users,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com"
+    derefAliases: "never"
+  userNameAttributes: ["uid"]
+  userUIDAttribute: "dn"
+--------------------------------------------------------------------------------
+
+Because the LDAP server provides some LDAP groups that are not meant to be used for OpenShift, you will also need a whitelist file. Create a `whitelist.txt` with the content shown below:
+
+--------------------------------------------------------------------------------
+cn=ocp-users,cn=groups,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com
+cn=portalapp,cn=groups,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com
+cn=paymentapp,cn=groups,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com
+cn=ocp-production,cn=groups,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com
+cn=ocp-platform,cn=groups,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com
+--------------------------------------------------------------------------------
+
+Test your configuration and synchronize groups:
+
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ *oc --user=admin adm groups sync \
+    --sync-config=groupsync.yaml \
+    --whitelist=whitelist.txt \
+    --confirm*
+group/ocp-users
+group/portalapp
+group/paymentapp
+group/ocp-production
+group/ocp-platform
+--------------------------------------------------------------------------------
+
+=== Running Group Sync in the Cluster
+
+The `operationalizing-openshift-lab` git repository includes a template for configuring LDAP group sync that builds off of the LDAP authentication configuration. The `ldap-group-sync.yaml` includes a number of parameters, but the required parameters for our configuration are:
+
+* `LDAP_URL` - `url` of the group sync config
+* `LDAP_BIND_DN` - `bindDN` of the group sync config
+* `LDAP_USERS_SEARCH_BASE` - `rfc2307.usersQuery.baseDN` of the group sync config
+* `LDAP_GROUPS_SEARCH_BASE` - `rfc2307.groupsQuery.baseDN` of the group sync config
+* `LDAP_GROUPS_WHITELIST` - Content of `whitelist.txt`
+* `SCHEDULE` - The default schedule in `@hourly`, but setting it to every two minutes is helpful to see results quickly.
+
+This template defines a CronJob to run `oc adm group sync` and a ConfigMap to store the group sync config and whitelist as well as a ServiceAccount, ClusterRole, and ClusterRoleBinding to manage the CronJob pods' cluster access rights. All namespaced resources are created in the `openshift-config` namespace. This configuration requires the TLS certificate authority config map and bind password secret created in the previous set.
+
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ **oc process -f templates/ldap-group-sync.yaml \
+-p LDAP_URL='ldap://ipa.shared.example.opentlc.com' \
+-p LDAP_BIND_DN='uid=admin,cn=users,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com' \
+-p LDAP_USERS_SEARCH_BASE='cn=users,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com' \
+-p LDAP_GROUPS_SEARCH_BASE='cn=groups,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com' \
+-p LDAP_GROUPS_WHITELIST="$(cat whitelist.txt)" \
+-p SCHEDULE='*/2' | oc apply -f -**
+warning: --param no longer accepts comma-separated lists of values. "LDAP_BIND_DN=uid=admin,cn=users,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com" will be treated as a single key-value pair.
+warning: --param no longer accepts comma-separated lists of values. "LDAP_USERS_SEARCH_BASE=cn=users,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com" will be treated as a single key-value pair.
+warning: --param no longer accepts comma-separated lists of values. "LDAP_GROUPS_SEARCH_BASE=cn=groups,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com" will be treated as a single key-value pair.
+warning: --param no longer accepts comma-separated lists of values. "LDAP_GROUPS_WHITELIST=cn=ocp-users,cn=groups,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com\ncn=portalapp,cn=groups,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com\ncn=paymentapp,cn=groups,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com\ncn=ocp-production,cn=groups,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com\ncn=ocp-platform,cn=groups,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com" will be treated as a single key-value pair.
+serviceaccount/ldap-group-syncer created
+clusterrole.rbac.authorization.k8s.io/ldap-group-syncer created
+clusterrolebinding.rbac.authorization.k8s.io/system:ldap-group-syncers created
+configmap/ldap-group-sync created
+cronjob.batch/cronjob-ldap-group-sync created
+--------------------------------------------------------------------------------
+
+You can check on the cronjob status with the following command
+
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ *oc get pod -n openshift-config -l cronjob-name=ldap-group-sync*
+NAME                               READY   STATUS      RESTARTS   AGE
+ldap-group-sync-1568050800-lrrtk   0/1     Completed   0          28s
+--------------------------------------------------------------------------------
 
 == OpenShift Applier
 

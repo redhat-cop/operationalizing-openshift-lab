@@ -1,6 +1,8 @@
 ---
 apiVersion: v1
 kind: Template
+labels:
+  template: cronjob-ldap-group-sync
 objects:
 - kind: "ServiceAccount"
   apiVersion: "v1"
@@ -12,8 +14,6 @@ objects:
   metadata:
     name: "ldap-group-syncer"
     namespace: "${NAMESPACE}"
-    labels:
-      template: "cronjob-ldap-group-sync"
   rules:
   - apiGroups:
     - ""
@@ -79,17 +79,21 @@ objects:
   metadata:
     name: "${JOB_NAME}"
     namespace: "${NAMESPACE}"
-    labels:
-      template: "cronjob-ldap-group-sync"
   spec:
     schedule: "${SCHEDULE}"
     concurrencyPolicy: "Forbid"
     successfulJobsHistoryLimit: "${{SUCCESS_JOBS_HISTORY_LIMIT}}"
     failedJobsHistoryLimit: "${{FAILED_JOBS_HISTORY_LIMIT}}"
     jobTemplate:
+      metadata:
+        labels:
+          cronjob-name: "${JOB_NAME}"
       spec:
         backoffLimit: 0
         template:
+          metadata:
+            labels:
+              cronjob-name: "${JOB_NAME}"
           spec:
             containers:
             - name: "${JOB_NAME}"
@@ -138,7 +142,7 @@ parameters:
 - name: "JOB_NAME"
   displayName: "Job Name"
   description: "Name of the Scheduled Job to Create."
-  value: "cronjob-ldap-group-sync"
+  value: "ldap-group-sync"
   required: true
 - name: "SCHEDULE"
   displayName: "Cron Schedule"
