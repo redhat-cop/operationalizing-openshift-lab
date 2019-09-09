@@ -1,18 +1,4 @@
 ---
-exclude_tags: gitops
-infraid: 1234
-cloudregion: 1234
-ldap_ca: certificatecontents
-ldap_bind_password: password
-ldap_bind_dn: uid=admin,cn=users,dc=example,dc=com
-ldap_url: "ldaps://ldap.example.com:636"
-ldap_search_url: "{{ ldap_url }}/cn=users,dc=example,dc=com?uid?sub?"
-ldap_groups_search_base: cn=groups,dc=example,dc=com
-ldap_users_search_base: cn=users,dc=example,dc=com
-ldap_groups_whitelist: whitelistcontents
-ldap_cron_schedule: "@hourly"
-aws_sc_encrypt_storage: "true"
-
 openshift_cluster_content:
 - galaxy_requirements: "{{ inventory_dir }}/../requirements.yml"
 - object: Setup and Discovery

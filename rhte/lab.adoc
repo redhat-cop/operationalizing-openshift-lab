@@ -127,7 +127,7 @@ data:
     -----END CERTIFICATE-----
 --------------------------------------------------------------------------------
 
-Now apply the cleaned up resource definition: 
+Now apply the cleaned up resource definition:
 
 [subs=+quotes]
 --------------------------------------------------------------------------------
@@ -136,7 +136,7 @@ Warning: oc apply should be used on resource created by either oc create --save-
 configmap/ldap-tls-ca configured
 --------------------------------------------------------------------------------
 
-NOTE: We receive a warning from `oc apply` because we initially created the config map without apply. The resource definition is not much more complicated than 
+NOTE: We receive a warning from `oc apply` because we initially created the config map without apply. The resource definition is not much more complicated than
 
 Now we need to create the secret for the LDAP bind password. The LDAP bind password will be provided during the lab. If you are following along on your own then you can find the password in the authentication module of the "Red Hat OpenShift Container Platform 4 Configuration" course in the learning management system.
 
@@ -408,6 +408,85 @@ ldap-group-sync-1568050800-lrrtk   0/1     Completed   0          28s
 
 == OpenShift Applier
 
-// FIXME
+The `openshift-applier` Ansible role provides a standard framework developed by the Red Hat container automation community of practice for automating OpenShift configuration through the use of `oc apply` commands.
+
+https://github.com/redhat-cop/openshift-applier
+
+=== Configuring OpenShift Applier
+
+The openshift-applier includes a playbook, `openshift-cluster-seed.yml` which is the normal way of using the openshift-applier role.
+This processes the role on each host that is a member of the `seed-hosts` Ansible hosts group.
+In a typical openshift-applier inventory the `seed-hosts` group is simply localhost.
+
+The `.applier/` directory in the operationalizing-openshift-lab repo includes an Ansible inventory for use by openshift-applier.
+
+Review the definition of the `seed-hosts` group:
+--------------------------------------------------------------------------------
+$ cat .applier/hosts
+[seed-hosts]
+localhost ansible_connection=local
+--------------------------------------------------------------------------------
+
+The configuration for seed-hosts is separated into cluster content, which lists the templates to be processed and variables used in parameters for those templates.
+
+Review `.applier/group_vars/seed-hosts/cluster-content.yml`:
+
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ cat .applier/group_vars/seed-hosts/cluster-content.yml`
+... OUTPUT OMITTED ...
+--------------------------------------------------------------------------------
+
+A single variable, `openshift_cluster_content`, provides a list of steps to be performed by the openshift-applier.
+After any Ansible galaxy requirements are installed a list of objects is applied to the cluster.
+Each cluster content object consists of pre-steps and a number of content items.
+The content items are a mix of files and templates processed to produce content to pass to `oc apply`.
+
+In this example the `openshift_cluster_content` references a number of variables that must be defined.
+
+Write the following to `.applier/group_vars/seed-hosts/vars.yaml`:
+
+--------------------------------------------------------------------------------
+---
+# LDAP server URL
+ldap_url: "ldap://ipa.shared.example.opentlc.com"
+ldap_ca: "{{ lookup('file', '{{ inventory_dir }}/ldap-ca.crt') }}"
+
+# LDAP BIND Settings
+ldap_bind_password: "{{ lookup('env', 'LDAP_BIND_PASSWORD') }}"
+ldap_bind_dn: uid=admin,cn=users,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com
+
+# LDAP search URL used during authentication
+ldap_auth_search_filter: "(memberOf=cn=ocp-users,cn=groups,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com)"
+ldap_search_url: "{{ ldap_url }}/{{ ldap_users_search_base }}?uid?sub?{{ ldap_auth_search_filter }}"
+
+# LDAP group sync configuration
+ldap_cron_schedule: "@hourly"
+ldap_groups_search_base: cn=groups,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com
+ldap_groups_whitelist: |
+  cn=ocp-users,cn=groups,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com
+  cn=portalapp,cn=groups,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com
+  cn=paymentapp,cn=groups,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com
+  cn=ocp-production,cn=groups,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com
+  cn=ocp-platform,cn=groups,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com
+ldap_users_search_base: cn=users,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com
+--------------------------------------------------------------------------------
+
+Install `openshift-applier` into the `galaxy` directory`
+
+--------------------------------------------------------------------------------
+$ *ansible-galaxy install -r requirements.yml -p galaxy*
+- extracting openshift-applier to /home/lab-user/operationalizing-openshift-lab/galaxy/openshift-applier
+- openshift-applier (master) was installed successfully
+- extracting discovery to /home/lab-user/operationalizing-openshift-lab/galaxy/discovery
+- discovery (pre-role-discovery) was installed successfully
+--------------------------------------------------------------------------------
+
+Run `openshift-applier`
+
+--------------------------------------------------------------------------------
+$ *ansible-playbook -i .applier/ galaxy/openshift-applier/playbooks/openshift-cluster-seed.yml*
+... OUTPUT OMITTED ...
+--------------------------------------------------------------------------------
 
 == Running OpenShift Applier with Eunomia Operator

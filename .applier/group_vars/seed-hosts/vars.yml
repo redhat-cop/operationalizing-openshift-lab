@@ -1,0 +1,32 @@
+---
+include_tags: managed
+
+aws_sc_encrypt_storage: "true"
+
+# LDAP server URL
+ldap_url: "ldap://ipa.shared.example.opentlc.com"
+ldap_ca: "{{ lookup('file', '{{ inventory_dir }}/ldap-ca.crt') }}"
+
+# LDAP BIND Settings
+ldap_bind_password: "{{ lookup('env', 'LDAP_BIND_PASSWORD') }}"
+ldap_bind_dn: uid=admin,cn=users,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com
+
+# LDAP search URL used during authentication
+ldap_auth_search_filter: "(memberOf=cn=ocp-users,cn=groups,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com)"
+ldap_search_url: "{{ ldap_url }}/{{ ldap_users_search_base }}?uid?sub?{{ ldap_auth_search_filter }}"
+
+# LDAP group sync configuration
+ldap_cron_schedule: "@hourly"
+ldap_groups_search_base: cn=groups,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com
+ldap_groups_whitelist: |
+  cn=ocp-users,cn=groups,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com
+  cn=portalapp,cn=groups,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com
+  cn=paymentapp,cn=groups,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com
+  cn=ocp-production,cn=groups,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com
+  cn=ocp-platform,cn=groups,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com
+ldap_users_search_base: cn=users,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com
+
+# These variables are determined dynamically and overridden with set_fact, but a
+# default values are required to prevent errors.
+infraid: ''
+cloudregion: ''
