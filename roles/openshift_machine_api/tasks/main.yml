@@ -1,0 +1,10 @@
+---
+- name: Scale up autoscaling custom machinesets
+  include_tasks: scale-up-group.yml
+  loop: "{{ machineset_custom_groups | default([]) }}"
+  loop_control:
+    loop_var: machineset_group
+    label: "{{ machineset_group.name }}"
+  vars:
+    availability_zone_count: "{{ default_worker_machinesets | length }}"
+  when: machineset_group.autoscale | default(False) | bool

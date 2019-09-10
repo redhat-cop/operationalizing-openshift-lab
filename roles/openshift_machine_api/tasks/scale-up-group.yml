@@ -1,0 +1,34 @@
+---
+- name: Scale up machinesets to minimum
+  k8s:
+    api_version: machine.openshift.io/v1beta1
+    kind: MachineSet
+    name: "{{ machineset_name }}"
+    namespace: openshift-machine-api
+    merge_type: merge
+    definition: "{{ resource_definition | from_yaml }}"
+  loop: "{{ default_worker_machinesets | default([]) }}"
+  loop_control:
+    index_var: i
+    loop_var: reference_machineset
+    label: machineset_name
+  vars:
+    availability_zone: >-
+      {{ reference_machineset.spec.template.spec.providerSpec.value.placement.availabilityZone }}
+    machineset_name: >-
+      {{ [infraid, machineset_group.name, availability_zone] | join('-') }}
+    current_machineset: >-
+      {{ current_machinesets | json_query(current_machineset_query) }}
+    current_machineset_query: >-
+      [?@.metadata.name == '{{ machineset_name }}' ]|[0]
+    current_replicas: >-
+      {{ current_machineset.spec.replicas|default(0) if current_machineset else 0 }}
+    min_replicas: >-
+      {{ ((machineset_group.min_replicas + availability_zone_count|int - i - 1) / availability_zone_count|int)|int }}
+    resource_definition: |
+      spec:
+        replicas: {{ min_replicas }}
+  # Set replicas to minimum when machineset is new or current is less than min
+  when: >-
+    not current_machineset or
+    current_replicas|int < min_replicas|int

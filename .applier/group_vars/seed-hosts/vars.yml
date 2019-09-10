@@ -12,6 +12,24 @@ ldap_groups_whitelist: whitelistcontents
 ldap_cron_schedule: "@hourly"
 aws_sc_encrypt_storage: "true"
 
+machineset_disable_default_workers: True
+machineset_custom_groups:
+- name: compute
+  autoscale: True
+  max_replicas: 6
+  min_replicas: 2
+  roles:
+  - compute
+- name: logging-es
+  replicas: 1
+  roles:
+  - logging-es
+  provider_spec_override:
+    value:
+      instanceType: m5.4xlarge
+
+scheduler_default_node_selector: node-role.kubernetes.io/compute=
+
 # Variables set dynamically by set_fact in discover role
 infraid: ''
 cloudregion: ''
