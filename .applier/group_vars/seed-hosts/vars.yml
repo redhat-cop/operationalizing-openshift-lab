@@ -1,0 +1,17 @@
+---
+exclude_tags: cluster-secrets
+
+ldap_ca: certificatecontents
+ldap_bind_password: password
+ldap_bind_dn: uid=admin,cn=users,dc=example,dc=com
+ldap_url: "ldaps://ldap.example.com:636"
+ldap_search_url: "{{ ldap_url }}/cn=users,dc=example,dc=com?uid?sub?"
+ldap_groups_search_base: cn=groups,dc=example,dc=com
+ldap_users_search_base: cn=users,dc=example,dc=com
+ldap_groups_whitelist: whitelistcontents
+ldap_cron_schedule: "@hourly"
+aws_sc_encrypt_storage: "true"
+
+# Variables set dynamically by set_fact in discover role
+infraid: ''
+cloudregion: ''
