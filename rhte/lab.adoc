@@ -490,3 +490,49 @@ $ *ansible-playbook -i .applier/ galaxy/openshift-applier/playbooks/openshift-cl
 --------------------------------------------------------------------------------
 
 == Running OpenShift Applier with Eunomia Operator
+
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ *mkdir ~/bin*
+$ *curl https://get.helm.sh/helm-v2.14.3-linux-amd64.tar.gz \
+  | tar xzf - -C ~/bin --strip-components=1 linux-amd64/helm*
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+100 23.0M  100 23.0M    0     0  18.8M      0  0:00:01  0:00:01 --:--:-- 12.0M
+$ *ls -l ~/bin/helm*
+-rwxr-xr-x. 1 lab-user users 41819776 Jul 30 16:35 /home/jkupfere-redhat.com/bin/helm*
+--------------------------------------------------------------------------------
+
+
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ *git clone https://github.com/KohlsTechnology/eunomia.git*
+--------------------------------------------------------------------------------
+
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ *helm template eunomia/deploy/helm/prereqs/ | oc apply -f -*
+namespace/eunomia-operator created
+customresourcedefinition.apiextensions.k8s.io/gitopsconfigs.eunomia.kohls.io created
+clusterrole.rbac.authorization.k8s.io/gitopsconfig-admin created
+clusterrole.rbac.authorization.k8s.io/gitopsconfig-viewer created
+clusterrole.rbac.authorization.k8s.io/eunomia-operator created
+clusterrolebinding.rbac.authorization.k8s.io/eunomia-operator created
+--------------------------------------------------------------------------------
+
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ *helm template eunomia/deploy/helm/operator/ --set openshift.route.enabled=true | oc apply -f -*
+configmap/eunomia-templates created
+serviceaccount/eunomia-operator created
+rolebinding.rbac.authorization.k8s.io/eunomia-operator created
+role.rbac.authorization.k8s.io/eunomia-operator created
+service/eunomia-operator created
+deployment.apps/eunomia-operator created
+--------------------------------------------------------------------------------
+
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ *ansible-playbook -i .applier/ galaxy/openshift-applier/playbooks/openshift-cluster-seed.yml \
+  -e include_tags=gitops*
+--------------------------------------------------------------------------------

@@ -1,6 +1,8 @@
 ---
+# Restrict default run by tag
 include_tags: managed
 
+# AWS storage class encrypt
 aws_sc_encrypt_storage: "true"
 
 # LDAP server URL
