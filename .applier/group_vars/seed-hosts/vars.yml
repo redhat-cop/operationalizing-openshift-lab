@@ -7,7 +7,7 @@ aws_sc_encrypt_storage: "true"
 
 # LDAP server URL
 ldap_url: "ldap://ipa.shared.example.opentlc.com"
-ldap_ca: "{{ lookup('file', '{{ inventory_dir }}/ldap-ca.crt') }}"
+ldap_ca: "{{ lookup('file', inventory_dir ~ '/ldap-ca.crt') }}"
 
 # LDAP BIND Settings
 ldap_bind_password: "{{ lookup('env', 'LDAP_BIND_PASSWORD') }}"
