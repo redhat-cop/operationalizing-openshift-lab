@@ -1,18 +1,4 @@
 ---
-exclude_tags: gitops
-infraid: 1234
-cloudregion: 1234
-ldap_ca: certificatecontents
-ldap_bind_password: password
-ldap_bind_dn: uid=admin,cn=users,dc=example,dc=com
-ldap_url: "ldaps://ldap.example.com:636"
-ldap_search_url: "{{ ldap_url }}/cn=users,dc=example,dc=com?uid?sub?"
-ldap_groups_search_base: cn=groups,dc=example,dc=com
-ldap_users_search_base: cn=users,dc=example,dc=com
-ldap_groups_whitelist: whitelistcontents
-ldap_cron_schedule: "@hourly"
-aws_sc_encrypt_storage: "true"
-
 openshift_cluster_content:
 - galaxy_requirements: "{{ inventory_dir }}/../requirements.yml"
 - object: Setup and Discovery
@@ -31,7 +17,7 @@ openshift_cluster_content:
   - name: ClusterAutoscaler
     file: "{{ inventory_dir }}/../manifests/clusterautoscaler.yaml"
     tags:
-      - managed
+    - cluster-autoscaling
   - name: MachineAutoscaler zone a
     template: "{{ inventory_dir }}/../templates/machineautoscaler.yaml"
     params_from_vars:
@@ -39,7 +25,7 @@ openshift_cluster_content:
       CLOUD_REGION_ZONE: "{{ cloudregion }}a"
     namespace: openshift-machine-api
     tags:
-      - managed
+    - cluster-autoscaling
   - name: MachineAutoscaler zone b
     template: "{{ inventory_dir }}/../templates/machineautoscaler.yaml"
     params_from_vars:
@@ -47,7 +33,7 @@ openshift_cluster_content:
       CLOUD_REGION_ZONE: "{{ cloudregion }}b"
     namespace: openshift-machine-api
     tags:
-      - managed
+    - cluster-autoscaling
   - name: MachineAutoscaler zone c
     template: "{{ inventory_dir }}/../templates/machineautoscaler.yaml"
     params_from_vars:
@@ -55,7 +41,7 @@ openshift_cluster_content:
       CLOUD_REGION_ZONE: "{{ cloudregion }}c"
     namespace: openshift-machine-api
     tags:
-      - managed
+    - cluster-autoscaling
 - object: LDAP Cluster Secrets
   content:
   - name: LDAP Secrets
@@ -76,7 +62,6 @@ openshift_cluster_content:
     namespace: openshift-config
     tags:
     - ldap_auth
-    - managed
 - object: LDAP Group Synchronization
   content:
   - name: LDAP Group Synchronization
@@ -91,7 +76,6 @@ openshift_cluster_content:
     namespace: openshift-config
     tags:
     - ldap_group_sync
-    - managed
 - object: Setup AWS StorageClasses
   content:
   - name: Setup AWS StorageClasses
@@ -99,3 +83,6 @@ openshift_cluster_content:
     params_from_vars:
       ENCRYPT_STORAGE: "{{ aws_sc_encrypt_storage }}"
     namespace: openshift-config
+    tags:
+    - aws
+    - aws-storage-classes
