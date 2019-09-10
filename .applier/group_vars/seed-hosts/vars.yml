@@ -1,9 +1,13 @@
 ---
 # Restrict default run by tag
-include_tags: managed
+exclude_tags: cluster-secrets
 
 # AWS storage class encrypt
 aws_sc_encrypt_storage: "true"
+
+# Eunomia configuration
+gitops_scm_url: https://github.com/jkupferer/operationalizing-openshift-lab
+gitops_scm_ref: rhte
 
 # LDAP server URL
 ldap_url: "ldap://ipa.shared.example.opentlc.com"

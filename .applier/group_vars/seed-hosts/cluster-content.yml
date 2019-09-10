@@ -1,6 +1,7 @@
 ---
 openshift_cluster_content:
 - galaxy_requirements: "{{ inventory_dir }}/../requirements.yml"
+
 - object: Cluster Autoscaling
   pre_steps:
   - role: discovery/roles/discover
@@ -8,7 +9,7 @@ openshift_cluster_content:
   - name: ClusterAutoscaler
     file: "{{ inventory_dir }}/../manifests/clusterautoscaler.yaml"
     tags:
-    - managed
+    - cluster-autoscaling
   - name: MachineAutoscaler zone a
     template: "{{ inventory_dir }}/../templates/machineautoscaler.yaml"
     params_from_vars:
@@ -16,7 +17,7 @@ openshift_cluster_content:
       CLOUD_REGION_ZONE: "{{ cloudregion }}a"
     namespace: openshift-machine-api
     tags:
-    - managed
+    - cluster-autoscaling
   - name: MachineAutoscaler zone b
     template: "{{ inventory_dir }}/../templates/machineautoscaler.yaml"
     params_from_vars:
@@ -24,7 +25,7 @@ openshift_cluster_content:
       CLOUD_REGION_ZONE: "{{ cloudregion }}b"
     namespace: openshift-machine-api
     tags:
-    - managed
+    - cluster-autoscaling
   - name: MachineAutoscaler zone c
     template: "{{ inventory_dir }}/../templates/machineautoscaler.yaml"
     params_from_vars:
@@ -32,7 +33,8 @@ openshift_cluster_content:
       CLOUD_REGION_ZONE: "{{ cloudregion }}c"
     namespace: openshift-machine-api
     tags:
-    - managed
+    - cluster-autoscaling
+
 - object: LDAP Cluster Secrets
   content:
   - name: LDAP Secrets
@@ -52,7 +54,8 @@ openshift_cluster_content:
       LDAP_SEARCH_URL: "{{ ldap_search_url }}"
     namespace: openshift-config
     tags:
-    - managed
+    - ldap-authentication
+
 - object: LDAP Group Synchronization
   content:
   - name: LDAP Group Synchronization
@@ -66,7 +69,8 @@ openshift_cluster_content:
       SCHEDULE: "{{ ldap_cron_schedule }}"
     namespace: openshift-config
     tags:
-    - managed
+    - ldap-group-sync
+
 - object: Setup AWS StorageClasses
   content:
   - name: Setup AWS StorageClasses
@@ -75,13 +79,15 @@ openshift_cluster_content:
       ENCRYPT_STORAGE: "{{ aws_sc_encrypt_storage }}"
     namespace: openshift-config
     tags:
-    - managed
+    - aws
+    - aws-storage-classes
 - object: Setup and Discovery
   content:
   - name: GitOps Config
     template: "{{ inventory_dir }}/../templates/cluster-gitops.yaml"
     params_from_vars:
-      CLUSTER_CONFIG_REPO_REF: pre-role-discovery
+      CLUSTER_CONFIG_REPO_URL: "{{ gitops_scm_url }}"
+      CLUSTER_CONFIG_REPO_REF: "{{ gitops_scm_ref }}"
       TEMPLATE_PROCESSOR_IMAGE: quay.io/etsauer/eunomia-applier:latest
     tags:
     - gitops
