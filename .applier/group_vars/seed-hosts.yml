@@ -3,7 +3,6 @@ exclude_tags: gitops
 infraid: 1234
 cloudregion: 1234
 ldap_ca: certificatecontents
-ldap_bind_password: password
 ldap_bind_dn: uid=admin,cn=users,dc=example,dc=com
 ldap_url: "ldaps://ldap.example.com:636"
 ldap_search_url: "{{ ldap_url }}/cn=users,dc=example,dc=com?uid?sub?"
@@ -26,6 +25,14 @@ openshift_cluster_content:
       TEMPLATE_PROCESSOR_IMAGE: quay.io/etsauer/eunomia-applier:latest
     tags:
     - gitops
+  - name: LDAP Secrets
+    template: "{{ inventory_dir }}/../templates/cluster-secrets.yaml"
+    params_from_vars:
+      LDAP_CA: "{{ ldap_ca }}"
+      LDAP_BIND_PASSWORD: "{{ ldap_bind_password }}"
+    namespace: openshift-config
+    tags:
+    - cluster-secrets
 - object: Cluster Autoscaling
   content:
   - name: ClusterAutoscaler
@@ -56,30 +63,19 @@ openshift_cluster_content:
     namespace: openshift-machine-api
     tags:
       - managed
-- object: LDAP Cluster Secrets
+- object: LDAP
   content:
-  - name: LDAP Secrets
-    template: "{{ inventory_dir }}/../templates/ldap-cluster-secrets.yaml"
-    params_from_vars:
-      LDAP_CA: "{{ ldap_ca }}"
-      LDAP_BIND_PASSWORD: "{{ ldap_bind_password }}"
-    namespace: openshift-config
-    tags:
-    - cluster-secrets
-  - name: LDAP Authentication
+  - name: Authentication
     template: "{{ inventory_dir }}/../templates/ldap-auth.yaml"
     params_from_vars:
       LDAP_CA: "{{ ldap_ca }}"
-      LDAP_BIND_PASSWORD: "{{ ldap_bind_password }}"
       LDAP_BIND_DN: "{{ ldap_bind_dn }}"
       LDAP_SEARCH_URL: "{{ ldap_search_url }}"
     namespace: openshift-config
     tags:
     - ldap_auth
     - managed
-- object: LDAP Group Synchronization
-  content:
-  - name: LDAP Group Synchronization
+  - name: Group Synchronization
     template: "{{ inventory_dir }}/../templates/ldap-group-sync.yaml"
     params_from_vars:
       LDAP_GROUPS_SEARCH_BASE: "{{ ldap_groups_search_base }}"
@@ -99,3 +95,5 @@ openshift_cluster_content:
     params_from_vars:
       ENCRYPT_STORAGE: "{{ aws_sc_encrypt_storage }}"
     namespace: openshift-config
+    tags:
+    - managed

@@ -31,7 +31,7 @@ Now we can set up eunomia to monitor a repo of configs, which in turn will apply
     git clone https://github.com/redhat-cop/operationalizing-openshift-lab
     cd operationalizing-openshift-lab
     ansible-galaxy install -r requirements.yml -p galaxy
-    ansible-playbook -i .applier/ galaxy/openshift-applier/playbooks/openshift-cluster-seed.yml -e include_tags=gitops
+    ansible-playbook -i .applier/ galaxy/openshift-applier/playbooks/openshift-cluster-seed.yml -e include_tags=gitops -e exclude_tags='' -e ldap_bind_password=password
 
 This run resulted in a namespace called `cluster-config` with our `GitOpsConfig` in it. From this, Eunomia spins up a job. Let's wait for that job to complete, and then see what we have.
 
