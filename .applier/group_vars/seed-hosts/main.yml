@@ -1,4 +1,7 @@
 ---
+# Exclude cluster-secrets when run from Eunomia GitOps operator
+exclude_tags: cluster-secrets
+
 openshift_cluster_content:
 - galaxy_requirements: "{{ inventory_dir }}/../requirements.yml"
 - object: Setup and Discovery
@@ -8,7 +11,7 @@ openshift_cluster_content:
   - name: GitOps Config
     template: "{{ inventory_dir }}/../templates/cluster-gitops.yaml"
     params_from_vars:
-      CLUSTER_CONFIG_REPO_REF: pre-role-discovery
+      CLUSTER_CONFIG_REPO_REF: master
       TEMPLATE_PROCESSOR_IMAGE: quay.io/etsauer/eunomia-applier:latest
     tags:
     - gitops
@@ -59,7 +62,7 @@ openshift_cluster_content:
       LDAP_BIND_DN: "{{ ldap_bind_dn }}"
       LDAP_URL: "{{ ldap_url }}"
       LDAP_USERS_SEARCH_BASE: "{{ ldap_users_search_base }}"
-      LDAP_GROUPS_WHITELIST: "{{ ldap_groups_whitelist }}"
+      LDAP_GROUPS_WHITELIST: "{{ ldap_groups_whitelist | default('') }}"
       SCHEDULE: "{{ ldap_cron_schedule }}"
     namespace: openshift-config
     tags:
@@ -74,3 +77,7 @@ openshift_cluster_content:
     tags:
     - aws
     - aws-storage-classes
+
+# Variables set dynamically by set_fact in discover role
+infraid: ''
+cloudregion: ''
