@@ -3,7 +3,7 @@ openshift_cluster_content:
 - galaxy_requirements: "{{ inventory_dir }}/../requirements.yml"
 - object: Setup and Discovery
   pre_steps:
-  - role: discovery/roles/discover
+  - role: self/roles/discover
   content:
   - name: GitOps Config
     template: "{{ inventory_dir }}/../templates/cluster-gitops.yaml"
@@ -12,36 +12,24 @@ openshift_cluster_content:
       TEMPLATE_PROCESSOR_IMAGE: quay.io/etsauer/eunomia-applier:latest
     tags:
     - gitops
-- object: Cluster Autoscaling
+- object: OpenShift Machine API
   content:
-  - name: ClusterAutoscaler
+  - name: Custom Machinesets
+    file: "{{ inventory_dir }}/../manifests/custom-machinesets.j2"
+    tags:
+    - openshift-machine-api
+  - name: Default Machinesets
+    file: "{{ inventory_dir }}/../manifests/default-machinesets.j2"
+    tags:
+    - openshift-machine-api
+    post_steps:
+    - role: self/roles/openshift_machine_api
+  - name: Cluster Autoscaler
     file: "{{ inventory_dir }}/../manifests/clusterautoscaler.yaml"
-    tags:
-    - cluster-autoscaling
-  - name: MachineAutoscaler zone a
-    template: "{{ inventory_dir }}/../templates/machineautoscaler.yaml"
-    params_from_vars:
-      CLUSTER_ID: "{{ infraid }}"
-      CLOUD_REGION_ZONE: "{{ cloudregion }}a"
-    namespace: openshift-machine-api
-    tags:
-    - cluster-autoscaling
-  - name: MachineAutoscaler zone b
-    template: "{{ inventory_dir }}/../templates/machineautoscaler.yaml"
-    params_from_vars:
-      CLUSTER_ID: "{{ infraid }}"
-      CLOUD_REGION_ZONE: "{{ cloudregion }}b"
-    namespace: openshift-machine-api
-    tags:
-    - cluster-autoscaling
-  - name: MachineAutoscaler zone c
-    template: "{{ inventory_dir }}/../templates/machineautoscaler.yaml"
-    params_from_vars:
-      CLUSTER_ID: "{{ infraid }}"
-      CLOUD_REGION_ZONE: "{{ cloudregion }}c"
-    namespace: openshift-machine-api
-    tags:
-    - cluster-autoscaling
+- object: Scheduler
+  content:
+  - name: Cluster Autoscaler
+    file: "{{ inventory_dir }}/../manifests/scheduler.j2"
 - object: LDAP Cluster Secrets
   content:
   - name: LDAP Secrets

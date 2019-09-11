@@ -28,7 +28,7 @@
   vars:
     # Base worker machinesets will lack machineset group label
     default_worker_machineset_json_query: >-
-      [?!contains(keys(metadata.labels), 'some_label')]
+      [?!contains(keys(metadata.labels), '{{custom_machineset_label}}')]
 
 - name: Set Cluster Info Facts
   set_fact:

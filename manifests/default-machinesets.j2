@@ -1,0 +1,18 @@
+{% for machineset in default_worker_machinesets %}
+---
+apiVersion: machine.openshift.io/v1beta1
+kind: MachineSet
+metadata:
+  labels:
+    machine.openshift.io/cluster-api-cluster: {{ infraid | to_json }}
+  name: {{ machineset.metadata.name | to_json }}
+  namespace: openshift-machine-api
+spec:
+{%   if machineset_disable_default_workers | default(False) | bool %}
+  replicas: 0
+{%   else %}
+  replicas: {{ machineset.spec.replicas | to_json }}
+{%   endif %}
+  selector: {{ machineset.spec.selector | to_json }}
+  template: {{ machineset.spec.template | to_json }}
+{% endfor %}

@@ -1,0 +1,3 @@
+---
+# Custom label used to identify custom machinesets
+custom_machineset_label: machine.openshift.io/cluster-api-machineset-group
