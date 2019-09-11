@@ -198,7 +198,6 @@ parameters:
 - name: "LDAP_GROUPS_WHITELIST"
   displayName: "LDAP sync whitelist"
   description: "File content for groups sync --whitelist option"
-  required: true
 - name: "LDAP_URL"
   displayName: "LDAP Server URL"
   description: "URL of you LDAP server"
