@@ -1,0 +1,834 @@
+Operationalizing OpenShift Lab
+==============================
+
+In this lab we are going to develop an iterative and declarative approach to taking a new OpenShift Cluster from vanilla to operationalized.
+This repo should act as a resource for cluster administrators to begin the process of defining clusters as code.
+
+In OpenShift 4, every cluster starts out the same way -- a bootstrapped control plane with master, and worker nodes.
+However, in order for this cluster to provide value to an organization, it needs further configuration.
+Using this repository as a starting point we are going to establish an automated strategy for managing configuration of an operationalized cluster, including things like:
+
+* Enabling Cluster Autoscaling
+* Configuring authentication and authorization
+* Managing namespace creation
+* Setting up quotas & limits for applications
+* Applying automated certificate management for applications
+* Deploying initial workloads
+* Deploying custom dashboards and setting up alerts
+
+Note that the purpose of this lab is not to teach how each of the components works individually, but to show how one can employ a common automation strategy to a myriad of different configurations.
+
+Let's get started...
+
+:numbered:
+
+Setting up a GitOps Workflow
+-----------------------------
+
+_GitOps_ is a form of Infrastructure as Code practice where all of the configurations that define a system are managed in a git repository, and automatically and idempotently applied to that system each time commits are made to the repository.
+For this lab, we are going to enable such a workflow using an Operator called [Eunomia](https://github.com/KohlsTechnology/eunomia) and [OpenShift Applier](https://github.com/redhat-cop/openshift-applier), and automation framework for OpenShift.
+Eunomia provides a workflow for watching git repos, triggering actions when new commits are detected.
+The action, in this case, will be a [Kubernetes Job](https://kubernetes.io/docs/tasks/job/) that executes Applier.
+
+Install Eunomia
+~~~~~~~~~~~~~~
+
+. The Eunomia operator is installed using a Helm template.
+Install the `helm` command into your `~/bin` directory.
+The `tiller` component is not needed to install Eunomia.
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ *mkdir ~/bin*
+$ *curl https://get.helm.sh/helm-v2.14.3-linux-amd64.tar.gz \
+  | tar xzf - -C ~/bin --strip-components=1 linux-amd64/helm*
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+100 23.0M  100 23.0M    0     0  18.8M      0  0:00:01  0:00:01 --:--:-- 12.0M
+$ *ls -l ~/bin/helm*
+-rwxr-xr-x. 1 lab-user users 41819776 Jul 30 16:35 /home/jkupfere-redhat.com/bin/helm*
+--------------------------------------------------------------------------------
+
+. Clone Eunomia from the KohlsTechnology git repository:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ *git clone https://github.com/KohlsTechnology/eunomia.git*
+Cloning into 'eunomia'...
+remote: Enumerating objects: 888, done.
+remote: Total 888 (delta 0), reused 0 (delta 0), pack-reused 888
+Receiving objects: 100% (888/888), 1.45 MiB | 174.00 KiB/s, done.
+Resolving deltas: 100% (412/412), done.
+--------------------------------------------------------------------------------
+
+. Process the Eunomia prerequisites with `helm template` and pass the output resource definitions to `oc apply`:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ *helm template eunomia/deploy/helm/prereqs/ | oc apply -f -*
+namespace/eunomia-operator created
+customresourcedefinition.apiextensions.k8s.io/gitopsconfigs.eunomia.kohls.io created
+clusterrole.rbac.authorization.k8s.io/gitopsconfig-admin created
+clusterrole.rbac.authorization.k8s.io/gitopsconfig-viewer created
+clusterrole.rbac.authorization.k8s.io/eunomia-operator created
+clusterrolebinding.rbac.authorization.k8s.io/eunomia-operator created
+--------------------------------------------------------------------------------
+
+. Process the Eunomia operator directory with `helm template` and pass the output resource definitions to `oc apply`:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ **helm template eunomia/deploy/helm/operator/ \
+  --set eunomia.operator.openshift.route.enabled=true \
+  --set eunomia.operator.image.tag=v0.0.1 \
+  --set eunomia.operator.image.pullPolicy=IfNotPresent | oc apply -f -**
+configmap/eunomia-templates created
+serviceaccount/eunomia-operator created
+rolebinding.rbac.authorization.k8s.io/eunomia-operator created
+role.rbac.authorization.k8s.io/eunomia-operator created
+service/eunomia-operator created
+deployment.apps/eunomia-operator created
+--------------------------------------------------------------------------------
+
+. Check Eunomia operator is running:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ **oc get pod -n eunomia-operator**
+NAME                               READY   STATUS    RESTARTS   AGE
+eunomia-operator-994b5d88d-ks6kw   1/1     Running   0          11m
+$ **oc logs -n eunomia-operator $(oc get pod -n eunomia-operator -o name)**
+{"level":"info","ts":1568215406.310659,"logger":"cmd","msg":"Go Version: go1.12.6"}
+{"level":"info","ts":1568215406.3106856,"logger":"cmd","msg":"Go OS/Arch: linux/amd64"}
+{"level":"info","ts":1568215406.3106892,"logger":"cmd","msg":"Version of operator-sdk: v0.8.1"}
+{"level":"info","ts":1568215406.3113315,"logger":"cmd","msg":"Templates initialized correctly"}
+{"level":"info","ts":1568215406.3116016,"logger":"leader","msg":"Trying to become the leader."}
+{"level":"info","ts":1568215406.4215379,"logger":"leader","msg":"No pre-existing lock was found."}
+{"level":"info","ts":1568215406.4294758,"logger":"leader","msg":"Became the leader."}
+{"level":"info","ts":1568215406.5258887,"logger":"cmd","msg":"Registering Components."}
+{"level":"info","ts":1568215406.526105,"logger":"kubebuilder.controller","msg":"Starting EventSource","controller":"gitopsconfig-controller","source":"kind source: /, Kind="}
+{"level":"info","ts":1568215406.5262187,"logger":"kubebuilder.controller","msg":"Starting EventSource","controller":"gitopsconfig-controller","source":"channel source: 0xc00096e7d0"}
+{"level":"info","ts":1568215406.5262578,"logger":"cmd","msg":"Starting the Web Server"}
+{"level":"info","ts":1568215406.5262656,"logger":"cmd","msg":"Starting the Cmd."}
+{"level":"info","ts":1568215406.6265268,"logger":"kubebuilder.controller","msg":"Starting Controller","controller":"gitopsconfig-controller"}
+{"level":"info","ts":1568215406.7266388,"logger":"kubebuilder.controller","msg":"Starting workers","controller":"gitopsconfig-controller","worker count":1}
+--------------------------------------------------------------------------------
+
+Create GitOps Repository
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Now we can set up eunomia to monitor a repo of configs, which in turn will apply configs to set up our cluster.
+Eunomia provides a custom resource kind called a `GitOpsConfig` to set up a monitor on a repository.
+You can examine the one we're going to use at [templates/cluster-gitops.yaml](templates/cluster-gitops.yaml).
+Let's use Applier to roll out the config.
+
+. Fork the link:https://github.com/redhat-cop/operationalizing-openshift-lab/[operationalizing-openshift-lab] repository into your own account.
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ *git clone https://github.com/_${GITHUB_ACCOUNT}_/operationalizing-openshift-lab*
+Cloning into \'operationalizing-openshift-lab'...
+remote: Enumerating objects: 77, done.
+remote: Counting objects: 100% (77/77), done.
+remote: Compressing objects: 100% (44/44), done.
+remote: Total 323 (delta 36), reused 62 (delta 29), pack-reused 246
+Receiving objects: 100% (323/323), 78.45 KiB | 0 bytes/s, done.
+Resolving deltas: 100% (129/129), done.
+--------------------------------------------------------------------------------
+
+. Update repository references in source:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ *cd operationalizing-openshift-lab*
+$ *sed -i "s|https://github.com/redhat-cop/operationalizing-openshift-lab|https://github.com/${GITHUB_ACCOUNT}/operationalizing-openshift-lab|" \
+  requirements.yml templates/cluster-gitops.yaml*
+--------------------------------------------------------------------------------
+
+. Download the OpenTLC shared IPA TLS certificate authority:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ *curl http://ipa.shared.example.opentlc.com/ipa/config/ca.crt -o .applier/ldap-ca.crt*
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+100  1350  100  1350    0     0   6597      0 --:--:-- --:--:-- --:--:--  6617
+--------------------------------------------------------------------------------
+
+. Set LDAP configuration vars in `.applier/group_vars/seed-hosts/auth.yml`:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ **cat >.applier/group_vars/seed-hosts/auth.yml <<EOF
+# LDAP server URL
+ldap_url: "ldap://ipa.shared.example.opentlc.com"
+ldap_ca: >-
+  {{ lookup("file", inventory_dir ~ "/ldap-ca.crt") }}
+
+# LDAP BIND config for authentication and groups sync
+ldap_bind_dn: uid=admin,cn=users,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com
+
+# Do not store secrets in version control!
+ldap_bind_password: >-
+  {{ lookup("env", "LDAP_BIND_PASSWORD") }}
+
+# LDAP users group
+ldap_users_search_base: cn=users,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com
+
+# LDAP search URL used during authentication
+ldap_auth_search_filter: "(memberOf=cn=ocp-users,cn=groups,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com)"
+ldap_search_url: "{{ ldap_url }}/{{ ldap_users_search_base }}?uid?sub?{{ ldap_auth_search_filter }}"
+
+# LDAP group sync configuration
+ldap_cron_schedule: "*/5 * * * *"
+
+# Groups path for LDAP search
+ldap_groups_search_base: cn=groups,cn=accounts,dc=example,dc=com
+
+# Optional LDAP groups whitelist
+ldap_groups_whitelist: |
+  cn=ocp-users,cn=groups,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com
+  cn=ocp-platform,cn=groups,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com
+  cn=ocp-production,cn=groups,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com
+  cn=paymentapp,cn=groups,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com
+  cn=portalapp,cn=groups,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com
+
+# LDAP base for finding groups
+ldap_groups_search_base: cn=groups,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com
+EOF**
+--------------------------------------------------------------------------------
+
+. Commit and push changes:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ *git add .applier/group_vars/seed-hosts/auth.yml .applier/ldap-ca.crt \
+    requirements.yml templates/cluster-gitops.yaml*
+$ *git commit -m "Update settings for initial lab run"*
+[master 00805da] Update to forked repo in requirements.yml
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+$ *git push origin master*
+Username for 'https://github.com': **__GITHUB_USER__**
+Password for 'https://__GITHUB_USER__@github.com':
+Counting objects: 18, done.
+Delta compression using up to 2 threads.
+Compressing objects: 100% (9/9), done.
+Writing objects: 100% (10/10), 2.10 KiB | 0 bytes/s, done.
+Total 10 (delta 5), reused 1 (delta 0)
+remote: Resolving deltas: 100% (5/5), completed with 5 local objects.
+To https://github.com/__GITHUB_ACCOUNT__/operationalizing-openshift-lab
+   a46e90f..3fa37a4  master -> master
+--------------------------------------------------------------------------------
+
+Configure Eunomia
+~~~~~~~~~~~~~~~~
+
+Configure Eunomia using `openshift-applier`:
+
+. Install `openshift-applier` into the `galaxy` directory:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ *ansible-galaxy install -r requirements.yml -p galaxy*
+- extracting openshift-applier to /home/lab-user/operationalizing-openshift-lab/galaxy/openshift-applier
+- openshift-applier (master) was installed successfully
+- extracting self to /home/lab-user/operationalizing-openshift-lab/galaxy/self
+- self (master) was installed successfully
+--------------------------------------------------------------------------------
+
+. Set and export the `LDAP_BIND_PASSWORD` environment variable:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ *export LDAP_BIND_PASSWORD=xxxxxx*
+--------------------------------------------------------------------------------
++
+NOTE: The LDAP bind password is included in the authentication unit of the "Red Hat OpenShift Container Platform 4 Configuration" course in the learning management system.
+
+. Configure cluster secrets by running `openshift-applier` with the objects tagged "cluster-secrets":
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ *ansible-playbook -i .applier/ galaxy/openshift-applier/playbooks/openshift-cluster-seed.yml \
+  -e include_tags=cluster-secrets -e exclude_tags=*
+--------------------------------------------------------------------------------
++
+NOTE: We must override `exclude_tags` to set cluster secrets because this variable is set in `.applier/group_vars/seed-hosts/main.yml` to exclude the `cluster-secrets` tag.
+
+. Configure Eunomia:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ *ansible-playbook -i .applier/ galaxy/openshift-applier/playbooks/openshift-cluster-seed.yml \
+  -e include_tags=gitops*
+--------------------------------------------------------------------------------
+
+. Check Eunomia Configuration
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ *oc get gitopsconfig cluster-config -n cluster-config -o yaml*
+apiVersion: eunomia.kohls.io/v1alpha1
+kind: GitOpsConfig
+metadata:
+  annotations:
+    gitopsconfig.eunomia.kohls.io/initialized: "true"
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"eunomia.kohls.io/v1alpha1","kind":"GitOpsConfig","metadata":{"annotations":{},"name":"cluster-config","namespace":"cluster-config"},"spec":{"resourceDeletionMode":"None","resourceHandlingMode":"None","serviceAccountRef":"eunomia-runner","templateProcessorImage":"quay.io/etsauer/eunomia-applier:latest","templateSource":{"contextDir":"","ref":"master","uri":"https://github.com/__GITOPS_ACCOUNT__/operationalizing-openshift-lab"},"triggers":[{"type":"Change"}]}}
+  creationTimestamp: "2019-09-11T19:22:09Z"
+  finalizers:
+  - eunomia-finalizer
+  generation: 3
+  name: cluster-config
+  namespace: cluster-config
+  resourceVersion: "2412063"
+  selfLink: /apis/eunomia.kohls.io/v1alpha1/namespaces/cluster-config/gitopsconfigs/cluster-config
+  uid: 73008724-d4c9-11e9-8b21-0665501aae14
+spec:
+  parameterSource:
+    contextDir: .
+    ref: master
+    uri: https://github.com/__GITOPS_ACCOUNT__/operationalizing-openshift-lab
+  resourceDeletionMode: None
+  resourceHandlingMode: None
+  serviceAccountRef: eunomia-runner
+  templateProcessorImage: quay.io/etsauer/eunomia-applier:latest
+  templateSource:
+    contextDir: ""
+    ref: master
+    uri: https://github.com/__GITOPS_ACCOUNT__/operationalizing-openshift-lab
+  triggers:
+  - type: Change
+--------------------------------------------------------------------------------
+
+. Check Eunomia Job completion:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ *oc get job -n cluster-config*
+NAME                                 COMPLETIONS   DURATION   AGE
+gitopsconfig-cluster-config-gtvzhi   1/1           52s        2m50s
+$ *oc logs -n cluster-config job/gitopsconfig-cluster-config-gtvzhi --tail=10*
+
+RUNNING HANDLER [openshift-applier : Clean up temporary Jinja directory]
+changed: [localhost] => (item=/tmp/ansible.LY8psZ)
+
+PLAY RECAP
+localhost                  : ok=162  changed=22   unreachable=0    failed=0    skipped=189  rescued=0    ignored=0
+
+Managing Resources
+Context "current" modified.
+Switched to context "current".
+--------------------------------------------------------------------------------
++
+NOTE: The configuration performed by this first job run reconfigures the openshift-machine-api, resulting in the worker nodes being replaced.
+It is possible that the node where the job ran will terminate before the logs can be retrieved.
+
+. Confirm Eunomia has reconfigured the cluster by testing login.
++
+First confirm that the OAuth configuration has been updated:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ *oc get oauth.config.openshift.io -o yaml*
+... OUTPUT OMITTED ...
+--------------------------------------------------------------------------------
+Then get the cluster console URL:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ *oc whoami --show-console*
+https://console-openshift-console.apps.example.com
+--------------------------------------------------------------------------------
++
+Test login with user "karla" or "andrew" using the same password as was used for LDAP bind.
+
+GitOps in Action
+----------------
+
+LDAP Group Sync Reconfiguration
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The initial parameters we used to configure LDAP group sync configured a cronjob to run every five minutes.
+Now that you have given it a little time to run, you will now configure it to run hourly instead.
+LDAP group sync was configured using an OpenShift template, so we will begin by exploring how the template was invoked and then reconfigure the parameter passed to the template to set the schedule.
+
+. Check the initial cronjob schelude for LDAP group sync:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ **oc get cronjob -n openshift-config**
+NAME                     SCHEDULE     SUSPEND   ACTIVE   LAST SCHEDULE   AGE
+cronjob-ldap-group-sync  */5 * * * *  False     0        3m30s           91m
+--------------------------------------------------------------------------------
+
+. Examine the `ldap-group-sync.yaml` template and identify the parameter that controls the schedule:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ *oc process --parameters -f ./templates/ldap-group-sync.yaml*
+NAME                               DESCRIPTION                                                                     GENERATOR           VALUE
+NAMESPACE                          Name of the Namespace where to deploy the Scheduled Job                                             openshift-config
+JOB_NAME                           Name of the Scheduled Job to Create.                                                                cronjob-ldap-group-sync
+*SCHEDULE                           Cron Schedule to Execute the Job                                                                    @hourly*
+JOB_SERVICE_ACCOUNT                Name of the Service Account To Exeucte the Job As.                                                  ldap-group-syncer
+LDAP_CA_CONFIGMAP                  Name of the ConfigMap containing the LDAP Certificate Authority                                     ldap-tls-ca
+BIND_PASSWORD_SECRET               Name of the Secret containing the LDAP bind password                                                ldap-bind-password
+LDAP_CONFIG_VOLUME_PATH            Mount path of LDAP configuration files                                                              /ldap-sync
+LDAP_CA_FILENAME                   Name of the LDAP CA file                                                                            ca.crt
+LDAP_BIND_PASSWORD_FILENAME        Name of the LDAP bind password file                                                                 bindPassword
+LDAP_GROUPS_SEARCH_BASE            Location in LDAP tree where you will find groups
+LDAP_GROUPS_FILTER                 LDAP Filter to use when deciding which groups to sync into OpenShift                                (objectClass=groupofnames)
+LDAP_GROUP_NAME_ATTRIBUTES         The attribute list to use to discover the name for the group.                                       ["cn"]
+LDAP_GROUP_MEMBERSHIP_ATTRIBUTES                                                                                                       ["member"]
+LDAP_GROUP_UID_ATTRIBUTE           The attribute that uniquely identifies a group on the LDAP server.                                  dn
+LDAP_GROUPS_WHITELIST              File content for groups sync --whitelist option
+LDAP_URL                           URL of you LDAP server
+LDAP_BIND_DN                       The Full DN for the user you wish to use to authenticate to LDAP
+LDAP_USERS_SEARCH_BASE             Location in LDAP tree where you will find users
+LDAP_SYNC_CONFIGMAP                Name for the config map storing the group sync config                                               ldap-group-sync
+LDAP_USER_UID_ATTRIBUTE            The attribute that uniquely identifies a user on the LDAP server.                                   dn
+LDAP_USER_NAME_ATTRIBUTES          JSON list of attributes to use to discover the user name for group membership                       ["uid"]
+LDAP_BIND_PASSWORD_SECRET          The name for the secret in which to store the bind password                                         ldap-bind-password
+SUCCESS_JOBS_HISTORY_LIMIT         The number of successful jobs that will be retained                                                 5
+FAILED_JOBS_HISTORY_LIMIT          The number of failed jobs that will be retained                                                     5
+IMAGE                              Image to use for the container.                                                                     registry.redhat.io/openshift4/ose-cli
+IMAGE_TAG                          Image Tag to use for the container.                                                                 4.1
+LDAP_SYNC_CONFIGMAP                Name for the config map storing the group sync config                                               ldap-group-sync
+LDAP_CA_CONFIGMAP                  Name for the config map storing the TLS certificate authority                                       ldap-tls-ca
+--------------------------------------------------------------------------------
+
+. Identify the connection between the OpenShift template parameter, `SCHEDULE` and the Ansible variable, `ldap_cron_schedule`:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ *grep SCHEDULE -C10 ./.applier/group_vars/seed-hosts/main.yml*
+- object: LDAP Group Synchronization
+  content:
+  - name: LDAP Group Synchronization
+    template: "{{ inventory_dir }}/../templates/ldap-group-sync.yaml"
+    params_from_vars:
+      LDAP_GROUPS_SEARCH_BASE: "{{ ldap_groups_search_base }}"
+      LDAP_BIND_DN: "{{ ldap_bind_dn }}"
+      LDAP_URL: "{{ ldap_url }}"
+      LDAP_USERS_SEARCH_BASE: "{{ ldap_users_search_base }}"
+      LDAP_GROUPS_WHITELIST: "{{ ldap_groups_whitelist | default('') }}"
+      *SCHEDULE: "{{ ldap_cron_schedule }}"*
+    namespace: openshift-config
+    tags:
+    - ldap_group_sync
+- object: Setup AWS StorageClasses
+  content:
+  - name: Setup AWS StorageClasses
+    template: "{{ inventory_dir }}/../templates/aws-ebs-storage-classes.yaml"
+    params_from_vars:
+      ENCRYPT_STORAGE: "{{ aws_sc_encrypt_storage }}"
+    namespace: openshift-config
+--------------------------------------------------------------------------------
+
+. Identify where the ldap_cron_schedule is set in seed-hosts Ansible group variables:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ **grep ^ldap_cron_schedule -B1 .applier/group_vars/seed-hosts/***
+.applier/group_vars/seed-hosts/auth.yml-# LDAP group sync configuration
+.applier/group_vars/seed-hosts/auth.yml:ldap_cron_schedule: "*/5 * * * *"
+--------------------------------------------------------------------------------
+
+. Set `ldap_cron_schedule` to `@hourly`:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ **sed -i \'s|^ldap_cron_schedule:.*|ldap_cron_schedule: "@hourly"|' \
+   .applier/group_vars/seed-hosts/auth.yml**
+--------------------------------------------------------------------------------
+
+. Git add/commit/push:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ *git add -p .applier/*
+diff --git a/.applier/group_vars/seed-hosts/auth.yml b/.applier/group_vars/seed-hosts/auth.yml
+index 0015fe1..57e3461 100644
+--- a/.applier/group_vars/seed-hosts/auth.yml
+\+++ b/.applier/group_vars/seed-hosts/auth.yml
+@@ -18,7 \+18,7 @@ ldap_auth_search_filter: "(memberOf=cn=ocp-users,cn=groups,cn=accounts,dc=shared
+ ldap_search_url: "{{ ldap_url }}/{{ ldap_users_search_base }}?uid?sub?{{ ldap_auth_search_filter }}"
+
+ # LDAP group sync configuration
+-ldap_cron_schedule: "\*/5 * * * 8"
++ldap_cron_schedule: "@hourly"
+
+ # Groups path for LDAP search
+ ldap_groups_search_base: cn=groups,cn=accounts,dc=example,dc=com
+Stage this hunk [y,n,q,a,d,/,j,J,g,e,?]? **y**
+
+$ **git commit -m "Set ldap group sync to hourly"**
+[master d4f7a8f] Set ldap group sync to hourly
+ 1 file changed, 2 insertions(+), 3 deletions(-)
+$ **git push origin master**
+Counting objects: 11, done.
+Delta compression using up to 2 threads.
+Compressing objects: 100% (5/5), done.
+Writing objects: 100% (6/6), 667 bytes | 0 bytes/s, done.
+Total 6 (delta 2), reused 0 (delta 0)
+remote: Resolving deltas: 100% (2/2), completed with 2 local objects.
+To https://github.com/__GITHUB_ACCOUNT__/operationalizing-openshift-lab.git
+   3a51662..d4f7a8f  master -> master
+--------------------------------------------------------------------------------
+
+. Trigger Eunomia processing:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ **oc annotate --overwrite -n cluster-config gitopsconfig cluster-config trigger-update=$(date +"%FT%TZ")**
+gitopsconfig.eunomia.kohls.io/cluster-config annotated
+--------------------------------------------------------------------------------
++
+NOTE: Eunomia webhook support is under development. In the future a webhook from GitHub could trigger processing.
+
+. Check that Eunomia has started a new job to apply the changes:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ **oc get job -n cluster-config**
+NAME                                 COMPLETIONS   DURATION   AGE
+gitopsconfig-cluster-config-7u9lld   1/1           58s        5m43s
+gitopsconfig-cluster-config-8ziqr8   1/1           44s        47s
+--------------------------------------------------------------------------------
+
+. Verify the cronjob schedule update:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ **oc get cronjob -n openshift-config**
+NAME                      SCHEDULE   SUSPEND   ACTIVE   LAST SCHEDULE   AGE
+cronjob-ldap-group-sync   @hourly    False     0        3m30s           91m
+--------------------------------------------------------------------------------
+
+Configure Eunomia to Run Periodically
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+You have Eunomia running and processing changes from git.
+Now, wouldn't it be great if it processed updates automaticall?
+Let's configure Eunomia to run periodically jobs.
+
+. Edit the template `cluster-gitops.yaml` template to add a `SCHEDULE` parameter:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ **sed -ri \'s/#(- type: Periodic)/\1/' templates/cluster-gitops.yaml**
+$ **sed -i \'s/#cron: .*/cron: "@hourly"/' templates/cluster-gitops.yaml**
+$ **cat >>templates/cluster-gitops.yaml <<EOF
+  - name: SCHEDULE
+    description: Periodic scheludle for gitops processing
+    value: "@hourly"
+EOF**
+--------------------------------------------------------------------------------
++
+NOTE: The above commands are provided help you move quickly through the lab, but it is better to actually open the file in a text editor and update it in the normal way.
+
+. It would be even more useful if we could set the schedule with an ansible parameter.
+Add a mapping for the Ansible variable, `gitops_schedule` to set the template `SCHEDULE` parameter:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ **sed -i \'/^  - name: GitOps Config/a\    params_from_vars:\n      SCHEDULE: "{{ gitops_schedule }}"' \
+   .applier/group_vars/seed-hosts/main.yml**
+--------------------------------------------------------------------------------
+
+. Create a vars file, `.applier/group_vars/seed-hosts/gitops.yml`, with a value for `gitops_schedule` to run at 07:30 and 19:30 every day:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ **cat >.applier/group_vars/seed-hosts/gitops.yml <<EOF
+gitops_schedule: "30 7,19 * * *"
+EOF***
+--------------------------------------------------------------------------------
+
+. Git add/commit/push:
++
+[subs="quotes,attributes"]
+--------------------------------------------------------------------------------
+$ **git add -p**
+diff --git a/.applier/group_vars/seed-hosts/main.yml b/.applier/group_vars/seed-hosts/main.yml
+index a995fb5..ee9c0fd 100644
+--- a/.applier/group_vars/seed-hosts/main.yml
+\+\++ b/.applier/group_vars/seed-hosts/main.yml
+@@ -12,6 \+12,7 @@ openshift_cluster_content:
+     template: "{{ inventory_dir }}/../templates/cluster-gitops.yaml"
++    params_from_vars:
++      SCHEDULE: "{{ gitops_schedule }}"
+     tags:
+     - gitops
+Stage this hunk [y,n,q,a,d,/,e,?]? **y**
+
+diff --git a/templates/cluster-gitops.yaml b/templates/cluster-gitops.yaml
+index ef67ab2..7148576 100644
+--- a/templates/cluster-gitops.yaml
++++ b/templates/cluster-gitops.yaml
+@@ -35,8 +35,8 @@ objects:
+       contextDir: ${CLUSTER_CONFIG_REPO_DIR}
+     triggers:
+     - type: Change
+-    #- type: Periodic
+-      #cron: '*/1 * * * *'
++    - type: Periodic
++      cron: ${SCHEDULE}
+     serviceAccountRef: eunomia-runner
+     templateProcessorImage: ${TEMPLATE_PROCESSOR_IMAGE}
+     resourceHandlingMode: None
+Stage this hunk [y,n,q,a,d,/,j,J,g,e,?]? **y**
+@@ -52,3 +52,6 @@ parameters:
+     value: ''
+   - name: TEMPLATE_PROCESSOR_IMAGE
+     value: quay.io/KohlsTechnology/eunomia-applier:v0.0.1
++  - name: SCHEDULE
++    description: Periodic scheludle for gitops processing
++    value: "@hourly"
+Stage this hunk [y,n,q,a,d,/,K,g,e,?]? **y**
+
+$ **git add .applier/group_vars/seed-hosts/gitops.yml**
+$ **git commit -m "Add schedule for gitops processing"**
+[master 5b5b79a] Add schedule for gitops processing
+ 3 files changed, 7 insertions({plus}), 2 deletions(-)
+ create mode 100644 .applier/group_vars/seed-hosts/gitops.yml
+$ **git push origin master**
+Counting objects: 16, done.
+Delta compression using up to 2 threads.
+Compressing objects: 100% (7/7), done.
+Writing objects: 100% (9/9), 970 bytes | 0 bytes/s, done.
+Total 9 (delta 4), reused 0 (delta 0)
+remote: Resolving deltas: 100% (4/4), completed with 4 local objects.
+To https://github.com/__GITHUB_ACCOUNT__/operationalizing-openshift-lab.git
+   8f466aa..df07dae  master -> master
+--------------------------------------------------------------------------------
+
+. Trigger Eunomia processing:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ **oc annotate --overwrite -n cluster-config gitopsconfig cluster-config trigger-update=$(date +"%FT%TZ")**
+gitopsconfig.eunomia.kohls.io/cluster-config annotated
+--------------------------------------------------------------------------------
+
+. Wait for Eunomia applier processing to complete and then check gitopsconfig definition:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ **oc get gitopsconfig -n cluster-config cluster-config -o yaml | grep \'^  triggers:' -A3**
+  triggers:
+  - type: Change
+  - cron: '30 7,19 * * '
+    type: Periodic
+--------------------------------------------------------------------------------
+
+Cluster Autoscaler Reconfiguration
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The initial configuration of the OpenShift Machine API provided in this lab has configured machine sets and the cluster autoscaler.
+In this exercise we will explore this configuration and add new parameters to customize the cluster autoscaler configuration.
+
+. Inspect the cluster autoscaler configuration:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ **oc get clusterautoscaler default -o yaml**
+apiVersion: autoscaling.openshift.io/v1
+kind: ClusterAutoscaler
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"autoscaling.openshift.io/v1","kind":"ClusterAutoscaler","metadata":{"annotations":{},"name":"default"},"spec":{"podPriorityThreshold":-10,"resourceLimits":{"cores":{"max":128,"min":8},"maxNodesTotal":24,"memory":{"max":256,"min":4}},"scaleDown":{"delayAfterAdd":"30m","delayAfterDelete":"30m","delayAfterFailure":"5m","enabled":true,"unneededTime":"5m"}}}
+  creationTimestamp: "2019-09-12T14:12:21Z"
+  generation: 2
+  name: default
+  resourceVersion: "253315"
+  selfLink: /apis/autoscaling.openshift.io/v1/clusterautoscalers/default
+  uid: 55e18c3d-d567-11e9-9b22-0a6f47c8dc86
+spec:
+  podPriorityThreshold: -10
+  resourceLimits:
+    cores:
+      max: 128
+      min: 8
+    maxNodesTotal: 24
+    memory:
+      max: 256
+      min: 4
+  scaleDown:
+    delayAfterAdd: 30m
+    delayAfterDelete: 30m
+    delayAfterFailure: 5m
+    enabled: true
+    unneededTime: 5m
+--------------------------------------------------------------------------------
+
+. Identify the source of the autoscaler configuration:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ **grep Autoscaler -r manifests/**
+manifests/clusterautoscaler.yaml:kind: ClusterAutoscaler
+templates/custom-machinesets.j2:kind: MachineAutoscaler
+--------------------------------------------------------------------------------
++
+There is configuration for both MachineAutoscaler as well as the ClusterAutoscaler custom resources.
+The MachineAutoscaler configuration is already handled by a Jinja2 template and configured with the `machineset_custom_groups` ansible variable.
+We will focus on adding a Jinja2 template for the ClusterAutoscaler.
+
+. Rename `manifests/clusterautoscaler.yaml` to `templates/clusterautoscaler.j2`:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ **git mv manifests/clusterautoscaler.yaml templates/clusterautoscaler.j2**
+--------------------------------------------------------------------------------
+
+. Update the reference the file path for the cluster autoscaler configuration in `openshift_cluster_content` in the file `.applier/group_vars/seed-hosts/main.yml`:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ **sed -i "s|manifests/clusterautoscaler.yaml|template/clusterautoscaler.j2|" \
+    .applier/group_vars/seed-hosts/main.yml**
+--------------------------------------------------------------------------------
+
+. Update `templates/clusterautoscaler.j2` to add variables for max and min cpus and memory:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ **cat >templates/clusterautoscaler.j2 <<EOF
+---
+apiVersion: autoscaling.openshift.io/v1
+kind: ClusterAutoscaler
+metadata:
+  name: default
+spec:
+  podPriorityThreshold: -10
+  resourceLimits:
+    maxNodesTotal: 24
+    cores:
+      min: {{ cluster_autoscaler_cores_min | default(8) }}
+      max: {{ cluster_autoscaler_cores_max | default(128) }}
+    memory:
+      min: {{ cluster_autoscaler_memory_min | default(4) }}
+      max: {{ cluster_autoscaler_memory_max | default(256) }}
+  scaleDown:
+    enabled: true
+    delayAfterAdd: 30m
+    delayAfterDelete: 30m
+    delayAfterFailure: 5m
+    unneededTime: 5m
+EOF**
+--------------------------------------------------------------------------------
+
+. Add settings for the new variables in `.applier/group_vars/seed-hosts/openshift-machine-api.yml`:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ **cat >>.applier/group_vars/seed-hosts/openshift-machine-api.yml <<EOF
+cluster_autoscaler_cores_min: 16
+cluster_autoscaler_cores_max: 256
+cluster_autoscaler_memory_min: 8
+cluster_autoscaler_memory_max: 512
+EOF**
+--------------------------------------------------------------------------------
+
+. Add/commit/push changes to git:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ **git add -p**
+diff --git a/.applier/group_vars/seed-hosts/main.yml b/.applier/group_vars/seed-hosts/main.yml
+index 835abb1..a995fb5 100644
+--- a/.applier/group_vars/seed-hosts/main.yml
+\+\++ b/.applier/group_vars/seed-hosts/main.yml
+@@ -28,7 \+28,7 @@ openshift_cluster_content:
+     post_steps:
+     - role: self/roles/openshift_machine_api
+   - name: Cluster Autoscaler
+-    file: "{{ inventory_dir }}/../manifests/clusterautoscaler.yaml"
++    file: "{{ inventory_dir }}/../templates/clusterautoscaler.j2"
+ - object: Scheduler
+   content:
+   - name: Cluster Autoscaler
+Stage this hunk [y,n,q,a,d,/,e,?]? **y**
+
+diff --git a/.applier/group_vars/seed-hosts/openshift-machine-api.yml b/.applier/group_vars/seed-hosts/openshift-machine-api.yml
+index 8d3022b..b41134a 100644
+--- a/.applier/group_vars/seed-hosts/openshift-machine-api.yml
++++ b/.applier/group_vars/seed-hosts/openshift-machine-api.yml
+@@ -15,5 \+15,8 @@ machineset_custom_groups:
+     value:
+       instanceType: m5.4xlarge
+
+ scheduler_default_node_selector: node-role.kubernetes.io/compute=
++cluster_autoscaler_cores_min: 16
++cluster_autoscaler_cores_max: 256
++cluster_autoscaler_memory_min: 8
++cluster_autoscaler_memory_max: 512
+Stage this hunk [y,n,q,a,d,/,s,e,?]? **y**
+
+$ **git commit -m "Add cluster autoscaler parameters"**
+[master 5c02182] Add cluster autoscaler parameters
+ 3 files changed, 9 insertions(+), 6 deletions(-)
+ rename {manifests/clusterautoscaler.yaml => templates/clusterautoscaler.j2} (56%)
+$ **git push**
+Counting objects: 16, done.
+Delta compression using up to 2 threads.
+Compressing objects: 100% (8/8), done.
+Writing objects: 100% (9/9), 1.01 KiB | 0 bytes/s, done.
+Total 9 (delta 5), reused 0 (delta 0)
+remote: Resolving deltas: 100% (5/5), completed with 5 local objects.
+To git@github.com:__GITHUB_ACCOUNT__/operationalizing-openshift-lab.git
+   2fa5a16..5c02182  master -> master
+--------------------------------------------------------------------------------
+
+. Trigger Eunomia processing:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ **oc annotate --overwrite -n cluster-config gitopsconfig cluster-config trigger-update=$(date +"%FT%TZ")**
+gitopsconfig.eunomia.kohls.io/cluster-config annotated
+--------------------------------------------------------------------------------
+
+. Wait for Eunomia applier job completion and then check that the clusterautoscaler has been updated:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ oc get clusterautoscaler default -o yaml
+apiVersion: autoscaling.openshift.io/v1
+kind: ClusterAutoscaler
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"autoscaling.openshift.io/v1","kind":"ClusterAutoscaler","metadata":{"annotations":{},"name":"default"},"spec":{"podPriorityThreshold":-10,"resourceLimits":{"cores":{"max":256,"min":16},"maxNodesTotal":24,"memory":{"max":512,"min":8}},"scaleDown":{"delayAfterAdd":"30m","delayAfterDelete":"30m","delayAfterFailure":"5m","enabled":true,"unneededTime":"5m"}}}
+  creationTimestamp: "2019-09-12T14:12:21Z"
+  generation: 3
+  name: default
+  resourceVersion: "262082"
+  selfLink: /apis/autoscaling.openshift.io/v1/clusterautoscalers/default
+  uid: 55e18c3d-d567-11e9-9b22-0a6f47c8dc86
+spec:
+  podPriorityThreshold: -10
+  resourceLimits:
+    cores:
+      max: 256
+      min: 16
+    maxNodesTotal: 24
+    memory:
+      max: 512
+      min: 8
+  scaleDown:
+    delayAfterAdd: 30m
+    delayAfterDelete: 30m
+    delayAfterFailure: 5m
+    enabled: true
+    unneededTime: 5m
+--------------------------------------------------------------------------------
+
+Further Steps:
+~~~~~~~~~~~~~~
+
+Create a new Template
+
+Add custom pre/post-role
