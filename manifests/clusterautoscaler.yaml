@@ -1,8 +1,8 @@
 ---
-apiVersion: "autoscaling.openshift.io/v1"
-kind: "ClusterAutoscaler"
+apiVersion: autoscaling.openshift.io/v1
+kind: ClusterAutoscaler
 metadata:
-  name: "default"
+  name: default
 spec:
   podPriorityThreshold: -10
   resourceLimits:
@@ -13,16 +13,9 @@ spec:
     memory:
       min: 4
       max: 256
-    gpus:
-    - type: nvidia.com/gpu
-      min: 0
-      max: 16
-    - type: amd.com/gpu
-      min: 0
-      max: 4
   scaleDown:
     enabled: true
-    delayAfterAdd: 10m
-    delayAfterDelete: 5m
-    delayAfterFailure: 30s
-    unneededTime: 60s
+    delayAfterAdd: 30m
+    delayAfterDelete: 30m
+    delayAfterFailure: 5m
+    unneededTime: 5m

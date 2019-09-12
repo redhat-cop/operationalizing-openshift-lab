@@ -31,21 +31,21 @@ spec:
         machine.openshift.io/cluster-api-machine-role: {{ machineset_group.name | to_json }}
         machine.openshift.io/cluster-api-machine-type: worker
         machine.openshift.io/cluster-api-machineset: {{ machineset_group.name | to_json }}
-    spec: 
+    spec:
      metadata:
        labels:
 {%     for role in machineset_group.roles %}
-         node-role.kubernetes.io/{{ role }}: "" 
+         node-role.kubernetes.io/{{ role }}: ""
 {%     endfor %}
-     providerSpec: {{ 
+     providerSpec: {{
        reference_machineset.spec.template.spec.providerSpec
        | combine(machineset_group.provider_spec_override | default({}), recursive=True)
        | to_json
      }}
 {%     if machineset_group.autoscale | default(False) | bool %}
 ---
-apiVersion: "autoscaling.openshift.io/v1beta1"
-kind: "MachineAutoscaler"
+apiVersion: autoscaling.openshift.io/v1beta1
+kind: MachineAutoscaler
 metadata:
   name: {{ machineset_name | to_json }}
   namespace: openshift-machine-api

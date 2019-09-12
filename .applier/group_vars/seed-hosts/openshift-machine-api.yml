@@ -15,5 +15,4 @@ machineset_custom_groups:
     value:
       instanceType: m5.4xlarge
 
-
 scheduler_default_node_selector: node-role.kubernetes.io/compute=
