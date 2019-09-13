@@ -14,7 +14,7 @@ spec:
     metadata:
       name: allow-from-same-namespace
     spec:
-      podSelector:
+      podSelector: {}
       ingress:
       - from:
         - podSelector: {}
