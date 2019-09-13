@@ -15,11 +15,11 @@ openshift_cluster_content:
 - object: OpenShift Machine API
   content:
   - name: Custom Machinesets
-    file: "{{ inventory_dir }}/../manifests/custom-machinesets.j2"
+    file: "{{ inventory_dir }}/../templates/custom-machinesets.j2"
     tags:
     - openshift-machine-api
   - name: Default Machinesets
-    file: "{{ inventory_dir }}/../manifests/default-machinesets.j2"
+    file: "{{ inventory_dir }}/../templates/default-machinesets.j2"
     tags:
     - openshift-machine-api
     post_steps:
@@ -29,7 +29,7 @@ openshift_cluster_content:
 - object: Scheduler
   content:
   - name: Cluster Autoscaler
-    file: "{{ inventory_dir }}/../manifests/scheduler.j2"
+    file: "{{ inventory_dir }}/../templates/scheduler.j2"
 - object: LDAP Cluster Secrets
   content:
   - name: LDAP Secrets
