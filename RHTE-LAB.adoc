@@ -469,8 +469,10 @@ Stage this hunk [y,n,q,a,d,/,j,J,g,e,?]? **y**
 
 $ **git commit -m "Set ldap group sync to hourly"**
 [master d4f7a8f] Set ldap group sync to hourly
- 1 file changed, 2 insertions(+), 3 deletions(-)
+ 1 file changed, 1 insertions(+), 1 deletions(-)
 $ **git push origin master**
+Username for 'https://github.com': **__GITHUB_USER__**
+Password for 'https://__GITHUB_USER__@github.com':
 Counting objects: 11, done.
 Delta compression using up to 2 threads.
 Compressing objects: 100% (5/5), done.
@@ -598,6 +600,8 @@ $ **git commit -m "Add schedule for gitops processing"**
  3 files changed, 7 insertions({plus}), 2 deletions(-)
  create mode 100644 .applier/group_vars/seed-hosts/gitops.yml
 $ **git push origin master**
+Username for 'https://github.com': **__GITHUB_USER__**
+Password for 'https://__GITHUB_USER__@github.com':
 Counting objects: 16, done.
 Delta compression using up to 2 threads.
 Compressing objects: 100% (7/7), done.
@@ -777,6 +781,8 @@ $ **git commit -m "Add cluster autoscaler parameters"**
  3 files changed, 9 insertions(+), 6 deletions(-)
  rename {manifests/clusterautoscaler.yaml => templates/clusterautoscaler.j2} (56%)
 $ **git push**
+Username for 'https://github.com': **__GITHUB_USER__**
+Password for 'https://__GITHUB_USER__@github.com':
 Counting objects: 16, done.
 Delta compression using up to 2 threads.
 Compressing objects: 100% (8/8), done.
