@@ -752,7 +752,7 @@ diff --git a/.applier/group_vars/seed-hosts/main.yml b/.applier/group_vars/seed-
 index 835abb1..a995fb5 100644
 --- a/.applier/group_vars/seed-hosts/main.yml
 \+\++ b/.applier/group_vars/seed-hosts/main.yml
-@@ -28,7 \+28,7 @@ openshift_cluster_content:
+@@ -27,7 \+27,7 @@ openshift_cluster_content:
      post_steps:
      - role: self/roles/openshift_machine_api
    - name: Cluster Autoscaler
@@ -767,7 +767,7 @@ diff --git a/.applier/group_vars/seed-hosts/openshift-machine-api.yml b/.applier
 index 8d3022b..b41134a 100644
 --- a/.applier/group_vars/seed-hosts/openshift-machine-api.yml
 +++ b/.applier/group_vars/seed-hosts/openshift-machine-api.yml
-@@ -15,5 \+15,8 @@ machineset_custom_groups:
+@@ -16,3 \+16,7 @@ machineset_custom_groups:
      value:
        instanceType: m5.4xlarge
 
@@ -776,6 +776,28 @@ index 8d3022b..b41134a 100644
 +cluster_autoscaler_cores_max: 256
 +cluster_autoscaler_memory_min: 8
 +cluster_autoscaler_memory_max: 512
+Stage this hunk [y,n,q,a,d,/,s,e,?]? **y**
+
+diff --git a/templates/clusterautoscaler.j2 b/templates/clusterautoscaler.j2
+index 2fe9de5..f9b6834 100644
+--- a/templates/clusterautoscaler.j2
++++ b/templates/clusterautoscaler.j2
+@@ -8,11 +8,11 @@ spec:
+   resourceLimits:
+     maxNodesTotal: 24
+     cores:
+-      min: 8
+-      max: 128
++      min: {{ cluster_autoscaler_cores_min | default(8) }}
++      max: {{ cluster_autoscaler_cores_max | default(128) }}
+     memory:
+-      min: 4
+-      max: 256
++      min: {{ cluster_autoscaler_memory_min | default(4) }}
++      max: {{ cluster_autoscaler_memory_max | default(256) }}
+   scaleDown:
+     enabled: true
+     delayAfterAdd: 30m
 Stage this hunk [y,n,q,a,d,/,s,e,?]? **y**
 
 $ **git commit -m "Add cluster autoscaler parameters"**
