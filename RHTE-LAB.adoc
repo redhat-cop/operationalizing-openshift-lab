@@ -219,6 +219,10 @@ remote: Resolving deltas: 100% (5/5), completed with 5 local objects.
 To https://github.com/__GITHUB_ACCOUNT__/operationalizing-openshift-lab
    a46e90f..3fa37a4  master -> master
 --------------------------------------------------------------------------------
++
+NOTE: If your GitHub account is configured for two-factor authentication then you will need to configure a
+link:https://help.github.com/en/articles/creating-a-personal-access-token-for-the-command-line[GitHub personal access token]
+to authenticate for the `git push` command.
 
 Configure Eunomia
 ~~~~~~~~~~~~~~~~
