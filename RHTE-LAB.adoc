@@ -10,7 +10,7 @@ Using this repository as a starting point we are going to establish an automated
 
 * Enabling Cluster Autoscaling
 * Configuring authentication and authorization
-* Managing namespace creation
+* Configuring namespace creation
 * Setting up quotas & limits for applications
 * Applying automated certificate management for applications
 * Deploying initial workloads
@@ -126,7 +126,8 @@ Let's use Applier to roll out the config.
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
-$ *git clone https://github.com/_${GITHUB_ACCOUNT}_/operationalizing-openshift-lab*
+$ **GITHUB_ACCOUNT=__YOUR_GITHUB_ACCOUNT__**
+$ **git clone https://github.com/${GITHUB_ACCOUNT}/operationalizing-openshift-lab**
 Cloning into \'operationalizing-openshift-lab'...
 remote: Enumerating objects: 77, done.
 remote: Counting objects: 100% (77/77), done.
@@ -278,7 +279,7 @@ metadata:
   annotations:
     gitopsconfig.eunomia.kohls.io/initialized: "true"
     kubectl.kubernetes.io/last-applied-configuration: |
-      {"apiVersion":"eunomia.kohls.io/v1alpha1","kind":"GitOpsConfig","metadata":{"annotations":{},"name":"cluster-config","namespace":"cluster-config"},"spec":{"resourceDeletionMode":"None","resourceHandlingMode":"None","serviceAccountRef":"eunomia-runner","templateProcessorImage":"quay.io/etsauer/eunomia-applier:latest","templateSource":{"contextDir":"","ref":"master","uri":"https://github.com/__GITOPS_ACCOUNT__/operationalizing-openshift-lab"},"triggers":[{"type":"Change"}]}}
+      {"apiVersion":"eunomia.kohls.io/v1alpha1","kind":"GitOpsConfig","metadata":{"annotations":{},"name":"cluster-config","namespace":"cluster-config"},"spec":{"resourceDeletionMode":"None","resourceHandlingMode":"None","serviceAccountRef":"eunomia-runner","templateProcessorImage":"quay.io/kohlstechnology/eunomia-applier:v0.0.1","templateSource":{"contextDir":"","ref":"master","uri":"https://github.com/__GITOPS_ACCOUNT__/operationalizing-openshift-lab"},"triggers":[{"type":"Change"}]}}
   creationTimestamp: "2019-09-11T19:22:09Z"
   finalizers:
   - eunomia-finalizer
@@ -296,7 +297,7 @@ spec:
   resourceDeletionMode: None
   resourceHandlingMode: None
   serviceAccountRef: eunomia-runner
-  templateProcessorImage: quay.io/etsauer/eunomia-applier:latest
+  templateProcessorImage: quay.io/kohlstechnology/eunomia-applier:v0.0.1
   templateSource:
     contextDir: ""
     ref: master
@@ -562,7 +563,7 @@ diff --git a/.applier/group_vars/seed-hosts/main.yml b/.applier/group_vars/seed-
 index a995fb5..ee9c0fd 100644
 --- a/.applier/group_vars/seed-hosts/main.yml
 \+\++ b/.applier/group_vars/seed-hosts/main.yml
-@@ -12,6 \+12,7 @@ openshift_cluster_content:
+@@ -9,6 \+9,8 @@ openshift_cluster_content:
      template: "{{ inventory_dir }}/../templates/cluster-gitops.yaml"
 +    params_from_vars:
 +      SCHEDULE: "{{ gitops_schedule }}"
