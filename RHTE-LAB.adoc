@@ -678,7 +678,7 @@ spec:
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
-$ **grep Autoscaler -r manifests/**
+$ **grep Autoscaler -r manifests/ templates/**
 manifests/clusterautoscaler.yaml:kind: ClusterAutoscaler
 templates/custom-machinesets.j2:kind: MachineAutoscaler
 --------------------------------------------------------------------------------
