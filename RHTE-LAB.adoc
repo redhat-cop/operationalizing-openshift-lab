@@ -698,7 +698,7 @@ $ **git mv manifests/clusterautoscaler.yaml templates/clusterautoscaler.j2**
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
-$ **sed -i "s|manifests/clusterautoscaler.yaml|template/clusterautoscaler.j2|" \
+$ **sed -i "s|manifests/clusterautoscaler.yaml|templates/clusterautoscaler.j2|" \
     .applier/group_vars/seed-hosts/main.yml**
 --------------------------------------------------------------------------------
 
