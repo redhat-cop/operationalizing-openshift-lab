@@ -548,8 +548,9 @@ $ **sed -i \'/^  - name: GitOps Config/a\    params_from_vars:\n      SCHEDULE: 
 [subs=+quotes]
 --------------------------------------------------------------------------------
 $ **cat >.applier/group_vars/seed-hosts/gitops.yml <<EOF
+---
 gitops_schedule: "30 7,19 * * *"
-EOF***
+EOF**
 --------------------------------------------------------------------------------
 
 . Git add/commit/push:
