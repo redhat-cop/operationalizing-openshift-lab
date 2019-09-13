@@ -1,0 +1,31 @@
+---
+apiVersion: redhatcop.redhat.io/v1alpha1
+kind: NamespaceConfig
+metadata:
+  name: multitenant
+  namespace: namespace-configuration-operator
+spec:
+  selector:
+    matchLabels:
+      multitenant: "true"
+  resources:
+  - apiVersion: networking.k8s.io/v1
+    kind: NetworkPolicy
+    metadata:
+      name: allow-from-same-namespace
+    spec:
+      podSelector: {}
+      ingress:
+      - from:
+        - podSelector: {}
+  - apiVersion: networking.k8s.io/v1
+    kind: NetworkPolicy
+    metadata:
+      name: allow-network-policy-group-ingress
+    spec:
+      podSelector: {}
+      ingress:
+      - from:
+        - namespaceSelector:
+            matchLabels:
+              network.openshift.io/policy-group: ingress

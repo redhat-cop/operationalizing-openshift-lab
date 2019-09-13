@@ -10,9 +10,6 @@ openshift_cluster_content:
   content:
   - name: GitOps Config
     template: "{{ inventory_dir }}/../templates/cluster-gitops.yaml"
-    params_from_vars:
-      CLUSTER_CONFIG_REPO_REF: master
-      TEMPLATE_PROCESSOR_IMAGE: quay.io/etsauer/eunomia-applier:latest
     tags:
     - gitops
 - object: OpenShift Machine API
@@ -77,6 +74,46 @@ openshift_cluster_content:
     tags:
     - aws
     - aws-storage-classes
+- object: Configure Project Creation
+  content:
+  # Deploys the Namespace Configuration Operator
+  # https://github.com/redhat-cop/namespace-configuration-operator/
+  - name: Namespace Config Operator Namespace
+    file: "{{ inventory_dir }}/../manifests/namespace-config-operator-ns.yaml"
+    tags:
+    - project-config
+  - name: Namespace Config Operator CRD
+    file: https://raw.githubusercontent.com/redhat-cop/namespace-configuration-operator/v0.0.1/deploy/crds/redhatcop_v1alpha1_namespaceconfig_crd.yaml
+    namespace: namespace-configuration-operator
+    tags:
+    - project-config
+  - name: Namespace Config Operator Role
+    file: https://raw.githubusercontent.com/redhat-cop/namespace-configuration-operator/v0.0.1/deploy/role.yaml
+    namespace: namespace-configuration-operator
+    tags:
+    - project-config
+  - name: Namespace Config Operator Role Binding
+    file: https://raw.githubusercontent.com/redhat-cop/namespace-configuration-operator/v0.0.1/deploy/role_binding.yaml
+    namespace: namespace-configuration-operator
+    tags:
+    - project-config
+  - name: Namespace Config Operator Service Account
+    file: https://raw.githubusercontent.com/redhat-cop/namespace-configuration-operator/v0.0.1/deploy/service_account.yaml
+    namespace: namespace-configuration-operator
+    tags:
+    - project-config
+  - name: Namespace Config Operator Deployment
+    file: https://raw.githubusercontent.com/redhat-cop/namespace-configuration-operator/v0.0.1/deploy/operator.yaml
+    namespace: namespace-configuration-operator
+    tags:
+    - project-config
+  # Deploys the Onboarding Operator
+  # https://github.com/redhat-cop/onboarding-manager
+  - name: Project Configurations
+    file: "{{ inventory_dir }}/../manifests/project-config/"
+    tags:
+    - project-config
+
 
 # Variables set dynamically by set_fact in discover role
 infraid: ''
