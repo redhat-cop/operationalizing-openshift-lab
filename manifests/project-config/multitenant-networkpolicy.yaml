@@ -23,7 +23,7 @@ spec:
     metadata:
       name: allow-network-policy-group-ingress
     spec:
-      podSelector:
+      podSelector: {}
       ingress:
       - from:
         - namespaceSelector:
