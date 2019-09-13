@@ -45,10 +45,10 @@ parameters:
   - name: CLUSTER_CONFIG_NAMESPACE
     value: cluster-config
   - name: CLUSTER_CONFIG_REPO_URL
-    value: https://github.com/redhat-cop/operationalizing-openshift-lab
+    value: https://github.com//operationalizing-openshift-lab
   - name: CLUSTER_CONFIG_REPO_REF
     value: master
   - name: CLUSTER_CONFIG_REPO_DIR
     value: ''
   - name: TEMPLATE_PROCESSOR_IMAGE
-    value: quay.io/KohlsTechnology/eunomia-applier:v0.0.1
+    value: quay.io/kohlstechnology/eunomia-applier:v0.0.1

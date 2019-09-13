@@ -10,9 +10,6 @@ openshift_cluster_content:
   content:
   - name: GitOps Config
     template: "{{ inventory_dir }}/../templates/cluster-gitops.yaml"
-    params_from_vars:
-      CLUSTER_CONFIG_REPO_REF: master
-      TEMPLATE_PROCESSOR_IMAGE: quay.io/etsauer/eunomia-applier:latest
     tags:
     - gitops
 - object: OpenShift Machine API
