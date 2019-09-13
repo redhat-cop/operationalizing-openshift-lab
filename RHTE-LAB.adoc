@@ -209,7 +209,7 @@ $ *git commit -m "Update settings for initial lab run"*
 [master 00805da] Update to forked repo in requirements.yml
  1 file changed, 1 insertion(+), 1 deletion(-)
 $ *git push origin master*
-Username for 'https://github.com': **__GITHUB_USER__**
+Username for \'https://github.com': **__GITHUB_USER__**
 Password for \'https://__GITHUB_USER__@github.com':
 Counting objects: 18, done.
 Delta compression using up to 2 threads.
@@ -472,7 +472,7 @@ $ **git commit -m "Set ldap group sync to hourly"**
 [master d4f7a8f] Set ldap group sync to hourly
  1 file changed, 1 insertions(+), 1 deletions(-)
 $ **git push origin master**
-Username for 'https://github.com': **__GITHUB_USER__**
+Username for \'https://github.com': **__GITHUB_USER__**
 Password for \'https://__GITHUB_USER__@github.com':
 Counting objects: 11, done.
 Delta compression using up to 2 threads.
@@ -783,7 +783,7 @@ $ **git commit -m "Add cluster autoscaler parameters"**
  3 files changed, 9 insertions(+), 6 deletions(-)
  rename {manifests/clusterautoscaler.yaml => templates/clusterautoscaler.j2} (56%)
 $ **git push**
-Username for 'https://github.com': **__GITHUB_USER__**
+Username for \'https://github.com': **__GITHUB_USER__**
 Password for \'https://__GITHUB_USER__@github.com':
 Counting objects: 16, done.
 Delta compression using up to 2 threads.
