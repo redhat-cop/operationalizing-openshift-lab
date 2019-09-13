@@ -802,7 +802,7 @@ Stage this hunk [y,n,q,a,d,/,s,e,?]? **y**
 
 $ **git commit -m "Add cluster autoscaler parameters"**
 [master 5c02182] Add cluster autoscaler parameters
- 3 files changed, 9 insertions(+), 6 deletions(-)
+ 3 files changed, 9 insertions(+), 5 deletions(-)
  rename {manifests/clusterautoscaler.yaml => templates/clusterautoscaler.j2} (56%)
 $ **git push**
 Username for \'https://github.com': **__GITHUB_USER__**
@@ -829,7 +829,7 @@ gitopsconfig.eunomia.kohls.io/cluster-config annotated
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
-$ oc get clusterautoscaler default -o yaml
+$ **oc get clusterautoscaler default -o yaml**
 apiVersion: autoscaling.openshift.io/v1
 kind: ClusterAutoscaler
 metadata:
