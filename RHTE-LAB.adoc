@@ -578,7 +578,7 @@ index ef67ab2..7148576 100644
      triggers:
      - type: Change
 -    #- type: Periodic
--      #cron: '*/1 * * * *'
+-      #cron: \'*/1 * * * *'
 +    - type: Periodic
 +      cron: ${SCHEDULE}
      serviceAccountRef: eunomia-runner
@@ -586,7 +586,7 @@ index ef67ab2..7148576 100644
      resourceHandlingMode: None
 Stage this hunk [y,n,q,a,d,/,j,J,g,e,?]? **y**
 @@ -52,3 +52,6 @@ parameters:
-     value: ''
+     value: \''
    - name: TEMPLATE_PROCESSOR_IMAGE
      value: quay.io/KohlsTechnology/eunomia-applier:v0.0.1
 +  - name: SCHEDULE
