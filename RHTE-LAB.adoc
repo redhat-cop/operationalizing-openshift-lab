@@ -524,7 +524,7 @@ Let's configure Eunomia to run periodically jobs.
 [subs=+quotes]
 --------------------------------------------------------------------------------
 $ **sed -ri \'s/#(- type: Periodic)/\1/' templates/cluster-gitops.yaml**
-$ **sed -i \'s/#cron: .*/cron: "@hourly"/' templates/cluster-gitops.yaml**
+$ **sed -i \'s/#cron: .*/cron: "${SCHEDULE}"/' templates/cluster-gitops.yaml**
 $ **cat >>templates/cluster-gitops.yaml <<EOF
   - name: SCHEDULE
     description: Periodic scheludle for gitops processing
