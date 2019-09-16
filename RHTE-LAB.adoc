@@ -35,7 +35,7 @@ Install Eunomia
 
 . The Eunomia operator is installed using a link:https://helm.sh[Helm] template.
 Install the `helm` command into your `~/bin` directory.
-The `tiller` component of Helmis not needed to install Eunomia which eliminates the security implications that would be required by making use of this component.
+The `tiller` component of Helm is not needed to install Eunomia which eliminates the security implications that would be required by making use of this component.
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
@@ -146,15 +146,6 @@ Resolving deltas: 100% (129/129), done.
 --------------------------------------------------------------------------------
 $ *cd operationalizing-openshift-lab*
 $ *sed -i "s|https://github.com/redhat-cop/operationalizing-openshift-lab|https://github.com/${GITHUB_ACCOUNT}/operationalizing-openshift-lab|" \
-  requirements.yml templates/cluster-gitops.yaml*
---------------------------------------------------------------------------------
-+
-If using an OSX machine, use the following commands:
-+
-[subs=+quotes]
---------------------------------------------------------------------------------
-$ *cd operationalizing-openshift-lab*
-$ *sed -i "" "s|https://github.com/redhat-cop/operationalizing-openshift-lab|https://github.com/${GITHUB_ACCOUNT}/operationalizing-openshift-lab|" \
   requirements.yml templates/cluster-gitops.yaml*
 --------------------------------------------------------------------------------
 
@@ -447,7 +438,7 @@ $ *grep SCHEDULE -C10 ./.applier/group_vars/seed-hosts/main.yml*
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
-$ **grep -r ^ldap_cron_schedule -B1 .applier/group_vars/seed-hosts/***
+$ **grep ^ldap_cron_schedule -B1 .applier/group_vars/seed-hosts/***
 .applier/group_vars/seed-hosts/auth.yml-# LDAP group sync configuration
 .applier/group_vars/seed-hosts/auth.yml:ldap_cron_schedule: "*/5 * * * *"
 --------------------------------------------------------------------------------
@@ -457,14 +448,6 @@ $ **grep -r ^ldap_cron_schedule -B1 .applier/group_vars/seed-hosts/***
 [subs=+quotes]
 --------------------------------------------------------------------------------
 $ **sed -i \'s|^ldap_cron_schedule:.*|ldap_cron_schedule: "@hourly"|' \
-   .applier/group_vars/seed-hosts/auth.yml**
---------------------------------------------------------------------------------
-+
-If using an OSX machine, use the following commands:
-+
-[subs=+quotes]
---------------------------------------------------------------------------------
-$ **sed -i "" \'s|^ldap_cron_schedule:.*|ldap_cron_schedule: "@hourly"|' \
    .applier/group_vars/seed-hosts/auth.yml**
 --------------------------------------------------------------------------------
 
