@@ -26,16 +26,16 @@ Setting up a GitOps Workflow
 -----------------------------
 
 _GitOps_ is a form of Infrastructure as Code practice where all of the configurations that define a system are managed in a git repository, and automatically and idempotently applied to that system each time commits are made to the repository.
-For this lab, we are going to enable such a workflow using an Operator called [Eunomia](https://github.com/KohlsTechnology/eunomia) and [OpenShift Applier](https://github.com/redhat-cop/openshift-applier), and automation framework for OpenShift.
+For this lab, we are going to enable such a workflow using an Operator called link:https://github.com/KohlsTechnology/eunomia[Eunomia] and link:https://github.com/redhat-cop/openshift-applier[OpenShift Applier], an automation framework for OpenShift.
 Eunomia provides a workflow for watching git repos, triggering actions when new commits are detected.
-The action, in this case, will be a [Kubernetes Job](https://kubernetes.io/docs/tasks/job/) that executes Applier.
+The action, in this case, will be a link:https://kubernetes.io/docs/tasks/job/[Kubernetes Job] that executes Applier.
 
 Install Eunomia
 ~~~~~~~~~~~~~~
 
-. The Eunomia operator is installed using a Helm template.
+. The Eunomia operator is installed using a link:https://helm.sh[Helm] template.
 Install the `helm` command into your `~/bin` directory.
-The `tiller` component is not needed to install Eunomia.
+The `tiller` component of Helm is not needed to install Eunomia which eliminates the security implications that would be required by making use of this component.
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
@@ -46,13 +46,14 @@ $ *curl https://get.helm.sh/helm-v2.14.3-linux-amd64.tar.gz \
                                  Dload  Upload   Total   Spent    Left  Speed
 100 23.0M  100 23.0M    0     0  18.8M      0  0:00:01  0:00:01 --:--:-- 12.0M
 $ *ls -l ~/bin/helm*
--rwxr-xr-x. 1 lab-user users 41819776 Jul 30 16:35 /home/jkupfere-redhat.com/bin/helm*
+-rwxr-xr-x. 1 lab-user users 41819776 Jul 30 16:35 /home/<lab_user>-redhat.com/bin/helm*
 --------------------------------------------------------------------------------
 
-. Clone Eunomia from the KohlsTechnology git repository:
+. From your HOME directory, clone Eunomia from the KohlsTechnology git repository:
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
+$ cd $HOME
 $ *git clone https://github.com/KohlsTechnology/eunomia.git*
 Cloning into 'eunomia'...
 remote: Enumerating objects: 888, done.
@@ -117,12 +118,14 @@ $ **oc logs -n eunomia-operator $(oc get pod -n eunomia-operator -o name)**
 Create GitOps Repository
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-Now we can set up eunomia to monitor a repo of configs, which in turn will apply configs to set up our cluster.
+Now, we can set up eunomia to monitor a repo of configs, which in turn will apply configs to set up our cluster.
 Eunomia provides a custom resource kind called a `GitOpsConfig` to set up a monitor on a repository.
-You can examine the one we're going to use at [templates/cluster-gitops.yaml](templates/cluster-gitops.yaml).
+You can examine the one we're going to use at link:templates/cluster-gitops.yaml[templates/cluster-gitops.yaml].
 Let's use Applier to roll out the config.
 
-. Fork the link:https://github.com/redhat-cop/operationalizing-openshift-lab/[operationalizing-openshift-lab] repository into your own account.
+. Fork the link:https://github.com/redhat-cop/operationalizing-openshift-lab/[operationalizing-openshift-lab] repository into your own account by selecting the *Fork* button and then if necessary, select the account for which the repository should be forked to.
+
+. Clone the fork locally by first setting your GitUHub username as a variable called _GITHUB_ACCOUNT_ and then cloning the repository.
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
@@ -137,7 +140,7 @@ Receiving objects: 100% (323/323), 78.45 KiB | 0 bytes/s, done.
 Resolving deltas: 100% (129/129), done.
 --------------------------------------------------------------------------------
 
-. Update repository references in source:
+. Update repository references in source to make use of your GitHub account instead of the upstream repository:
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
@@ -146,7 +149,7 @@ $ *sed -i "s|https://github.com/redhat-cop/operationalizing-openshift-lab|https:
   requirements.yml templates/cluster-gitops.yaml*
 --------------------------------------------------------------------------------
 
-. Download the OpenTLC shared IPA TLS certificate authority:
+. A portion of this lab will communicate with a secure link:https://access.redhat.com/products/identity-management[IPA] server in a secure fashion. Download the OpenTLC shared IPA TLS certificate authority that will be used to facilitate the communication:
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
@@ -199,7 +202,7 @@ ldap_groups_search_base: cn=groups,cn=accounts,dc=shared,dc=example,dc=opentlc,d
 EOF**
 --------------------------------------------------------------------------------
 
-. Commit and push changes:
+. Commit and push changes to your Git repository:
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
@@ -230,7 +233,7 @@ Configure Eunomia
 
 Configure Eunomia using `openshift-applier`:
 
-. Install `openshift-applier` into the `galaxy` directory:
+. Install `openshift-applier` into the `galaxy` directory using the `ansible-galaxy` command line tool:
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
@@ -241,7 +244,7 @@ $ *ansible-galaxy install -r requirements.yml -p galaxy*
 - self (master) was installed successfully
 --------------------------------------------------------------------------------
 
-. Set and export the `LDAP_BIND_PASSWORD` environment variable:
+. Set and export the `LDAP_BIND_PASSWORD` environment variable as it will be added to the set of cluster _secrets_ required in later portions of the lab:
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
@@ -293,7 +296,7 @@ spec:
   parameterSource:
     contextDir: .
     ref: master
-    uri: https://github.com/__GITOPS_ACCOUNT__/operationalizing-openshift-lab
+    uri: https://github.com/__GITHUB_ACCOUNT__/operationalizing-openshift-lab
   resourceDeletionMode: None
   resourceHandlingMode: None
   serviceAccountRef: eunomia-runner
@@ -301,7 +304,7 @@ spec:
   templateSource:
     contextDir: ""
     ref: master
-    uri: https://github.com/__GITOPS_ACCOUNT__/operationalizing-openshift-lab
+    uri: https://github.com/__GITHUB_ACCOUNT__/operationalizing-openshift-lab
   triggers:
   - type: Change
 --------------------------------------------------------------------------------
@@ -367,7 +370,7 @@ NAME                     SCHEDULE     SUSPEND   ACTIVE   LAST SCHEDULE   AGE
 cronjob-ldap-group-sync  */5 * * * *  False     0        3m30s           91m
 --------------------------------------------------------------------------------
 
-. Examine the `ldap-group-sync.yaml` template and identify the parameter that controls the schedule:
+. Examine the link:templates/ldap-group-sync.yaml[templates/ldap-group-sync.yaml] template and identify the parameter that controls the schedule:
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
@@ -431,7 +434,7 @@ $ *grep SCHEDULE -C10 ./.applier/group_vars/seed-hosts/main.yml*
     namespace: openshift-config
 --------------------------------------------------------------------------------
 
-. Identify where the ldap_cron_schedule is set in seed-hosts Ansible group variables:
+. Identify where the `ldap_cron_schedule` variable is set in seed-hosts Ansible group variables:
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
@@ -517,7 +520,7 @@ Configure Eunomia to Run Periodically
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 You have Eunomia running and processing changes from git.
-Now, wouldn't it be great if it processed updates automaticall?
+Now, wouldn't it be great if it processed updates automatically?
 Let's configure Eunomia to run periodically jobs.
 
 . Edit the template `cluster-gitops.yaml` template to add a `SCHEDULE` parameter:
@@ -544,7 +547,7 @@ $ **sed -i \'/^  - name: GitOps Config/a\    params_from_vars:\n      SCHEDULE: 
    .applier/group_vars/seed-hosts/main.yml**
 --------------------------------------------------------------------------------
 
-. Create a vars file, `.applier/group_vars/seed-hosts/gitops.yml`, with a value for `gitops_schedule` to run at 07:30 and 19:30 every day:
+. Create a link:https://docs.ansible.com/ansible/latest/user_guide/playbooks_variables.html#defining-variables-in-files[vars file], `.applier/group_vars/seed-hosts/gitops.yml`, with a value for `gitops_schedule` to run at 07:30 and 19:30 every day:
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
@@ -554,7 +557,7 @@ gitops_schedule: "30 7,19 * * *"
 EOF**
 --------------------------------------------------------------------------------
 
-. Git add/commit/push:
+. Update the changes to the repository by using the git add, commit, and push subcommands:
 +
 [subs="quotes,attributes"]
 --------------------------------------------------------------------------------
@@ -636,7 +639,7 @@ $ **oc get gitopsconfig -n cluster-config cluster-config -o yaml | grep \'^  tri
 Cluster Autoscaler Reconfiguration
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The initial configuration of the OpenShift Machine API provided in this lab has configured machine sets and the cluster autoscaler.
+The initial configuration of the link:https://docs.openshift.com/container-platform/4.1/machine_management/creating-machineset.html#machine-api-overview_creating-machineset[OpenShift Machine API] provided in this lab has configured machine sets and the cluster autoscaler.
 In this exercise we will explore this configuration and add new parameters to customize the cluster autoscaler configuration.
 
 . Inspect the cluster autoscaler configuration:
@@ -743,7 +746,7 @@ cluster_autoscaler_memory_max: 512
 EOF**
 --------------------------------------------------------------------------------
 
-. Add/commit/push changes to git:
+. Update the changes to the repository by using the git add, commit, and push subcommands:
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
@@ -805,8 +808,8 @@ $ **git commit -m "Add cluster autoscaler parameters"**
  3 files changed, 9 insertions(+), 5 deletions(-)
  rename {manifests/clusterautoscaler.yaml => templates/clusterautoscaler.j2} (56%)
 $ **git push**
-Username for \'https://github.com': **__GITHUB_USER__**
-Password for \'https://__GITHUB_USER__@github.com':
+Username for \'https://github.com': **__GITHUB_ACCOUNT__**
+Password for \'https://__GITHUB_ACCOUNT__@github.com':
 Counting objects: 16, done.
 Delta compression using up to 2 threads.
 Compressing objects: 100% (8/8), done.
