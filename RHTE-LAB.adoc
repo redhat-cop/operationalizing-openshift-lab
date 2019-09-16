@@ -33,9 +33,11 @@ The action, in this case, will be a link:https://kubernetes.io/docs/tasks/job/[K
 Install Eunomia
 ~~~~~~~~~~~~~~
 
-. The Eunomia operator is installed using a link:https://helm.sh[Helm] template.
+In this section of the lab we install Eunomia following the installation instructions provided in the
+link:https://github.com/KohlsTechnology/eunomia/blob/master/README.md[Eunomia README.md].
+
+. You will install the Eunomia operator using a provided link:https://helm.sh[Helm] template.
 Install the `helm` command into your `~/bin` directory.
-The `tiller` component of Helm is not needed to install Eunomia which eliminates the security implications that would be required by making use of this component.
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
@@ -48,13 +50,15 @@ $ *curl https://get.helm.sh/helm-v2.14.3-linux-amd64.tar.gz \
 $ *ls -l ~/bin/helm*
 -rwxr-xr-x. 1 lab-user users 41819776 Jul 30 16:35 /home/<lab_user>-redhat.com/bin/helm*
 --------------------------------------------------------------------------------
+NOTE: This command only installs the `helm` executible from the release.
+The `tiller` component of Helm is not needed to install Eunomia which eliminates the security implications that would be required by making use of this component.
 
 . From your HOME directory, clone Eunomia from the KohlsTechnology git repository:
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
-$ cd $HOME
-$ *git clone https://github.com/KohlsTechnology/eunomia.git*
+$ **cd $HOME**
+$ **git clone https://github.com/KohlsTechnology/eunomia.git**
 Cloning into 'eunomia'...
 remote: Enumerating objects: 888, done.
 remote: Total 888 (delta 0), reused 0 (delta 0), pack-reused 888
@@ -114,6 +118,8 @@ $ **oc logs -n eunomia-operator $(oc get pod -n eunomia-operator -o name)**
 {"level":"info","ts":1568215406.6265268,"logger":"kubebuilder.controller","msg":"Starting Controller","controller":"gitopsconfig-controller"}
 {"level":"info","ts":1568215406.7266388,"logger":"kubebuilder.controller","msg":"Starting workers","controller":"gitopsconfig-controller","worker count":1}
 --------------------------------------------------------------------------------
++
+Eunomia is now running, but does not yet have any configuration for GitOps processing.
 
 Create GitOps Repository
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -125,7 +131,20 @@ Let's use Applier to roll out the config.
 
 . Fork the link:https://github.com/redhat-cop/operationalizing-openshift-lab/[operationalizing-openshift-lab] repository into your own account by selecting the *Fork* button and then if necessary, select the account for which the repository should be forked to.
 
-. Clone the fork locally by first setting your GitUHub username as a variable called _GITHUB_ACCOUNT_ and then cloning the repository.
+. Configure your git client environment.
++
+Before you start using git it is helpful to configure your git environment.
+Set your `user.name`, `user.email`, and `push.default` settings, substituting
+your name and email address in the following commands:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ **git config --global user.name "Your Name"**
+$ **git config --global user.email you@example.com**
+$ **git config --global push.default simple**
+--------------------------------------------------------------------------------
+
+. Clone the fork locally by first setting your GitUHub username as a variable called __GITHUB_ACCOUNT__ and then cloning the repository.
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
@@ -140,77 +159,100 @@ Receiving objects: 100% (323/323), 78.45 KiB | 0 bytes/s, done.
 Resolving deltas: 100% (129/129), done.
 --------------------------------------------------------------------------------
 
-. Update repository references in source to make use of your GitHub account instead of the upstream repository:
+. Update repository references in source to make use of your GitHub account instead of the upstream repository.
++
+There are references to the repository in `requiremens.yml` and `templates/cluster-gitops.yaml`.
+The `requirements.yml` is used by the OpenShift applier during pre and post steps to pull down ansible roles.
+The `templates/cluster-gitops.yaml` will be used to configure Eunomia to point to your repository.
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
-$ *cd operationalizing-openshift-lab*
+$ *cd ~/operationalizing-openshift-lab*
 $ *sed -i "s|https://github.com/redhat-cop/operationalizing-openshift-lab|https://github.com/${GITHUB_ACCOUNT}/operationalizing-openshift-lab|" \
   requirements.yml templates/cluster-gitops.yaml*
 --------------------------------------------------------------------------------
 
-. A portion of this lab will communicate with a secure link:https://access.redhat.com/products/identity-management[IPA] server in a secure fashion. Download the OpenTLC shared IPA TLS certificate authority that will be used to facilitate the communication:
+. The LDAP authentication and group sync configuration for this lab will communicate with an link:https://access.redhat.com/products/identity-management[IPA] server in a secure fashion.
+Download the OpenTLC shared IPA TLS certificate authority that will be used to facilitate the communication:
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
-$ *curl http://ipa.shared.example.opentlc.com/ipa/config/ca.crt -o .applier/ldap-ca.crt*
+$ *curl http://ipa.shared.example.opentlc.com/ipa/config/ca.crt -o ldap-ca.crt*
   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
                                  Dload  Upload   Total   Spent    Left  Speed
 100  1350  100  1350    0     0   6597      0 --:--:-- --:--:-- --:--:--  6617
 --------------------------------------------------------------------------------
 
-. Set LDAP configuration vars in `.applier/group_vars/seed-hosts/auth.yml`:
+. Set LDAP configuration variables for the lab.
+The `openshift-applier` Ansible role used for GitOps in this lab uses an Ansible inventory store in the `.ansible/` directory of your repository.
+The ansible host group, `seed-hosts`, is configured with group variables in YAML in the `.applier/group_vars/seed-hosts/` directory.
+Within this directory the variables are managed in separate YAML files, organized by the purpose of the variables.
+An example `auth.yml` file is provided with the lab repository for reference.
+The LDAP settings used for this lab can be set by running the command below.
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
 $ **cat >.applier/group_vars/seed-hosts/auth.yml <<EOF
 # LDAP server URL
 ldap_url: "ldap://ipa.shared.example.opentlc.com"
-ldap_ca: >-
-  {{ lookup("file", inventory_dir ~ "/ldap-ca.crt") }}
 
-# LDAP BIND config for authentication and groups sync
+# TLS certificate authority by Ansible file lookup
+ldap_ca: >-
+  {{ lookup("file", inventory_dir ~ "/../ldap-ca.crt") }}
+
+# LDAP BIND config for user authentication and groups sync
 ldap_bind_dn: uid=admin,cn=users,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com
 
 # Do not store secrets in version control!
+# LDAP bind password configured by environment variable
 ldap_bind_password: >-
   {{ lookup("env", "LDAP_BIND_PASSWORD") }}
 
-# LDAP users group
+# Location in LDAP for users and groups
 ldap_users_search_base: cn=users,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com
-
-# LDAP search URL used during authentication
-ldap_auth_search_filter: "(memberOf=cn=ocp-users,cn=groups,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com)"
-ldap_search_url: "{{ ldap_url }}/{{ ldap_users_search_base }}?uid?sub?{{ ldap_auth_search_filter }}"
-
-# LDAP group sync configuration
-ldap_cron_schedule: "*/5 * * * *"
-
-# Groups path for LDAP search
 ldap_groups_search_base: cn=groups,cn=accounts,dc=example,dc=com
 
-# Optional LDAP groups whitelist
+# LDAP search filter URL used during authentication
+ldap_search_url: "{{ ldap_url }}/{{ ldap_users_search_base }}?uid?sub?{{ ldap_auth_search_filter }}"
+
+# This search filter enforces that users must belong to the ocp-users group
+ldap_auth_search_filter: "(memberOf=cn=ocp-users,cn=groups,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com)"
+
+# LDAP group sync schedule configuration
+ldap_cron_schedule: "*/5 * * * *"
+
+# LDAP groups whitelist restricts groups synced from LDAP to OpenShift
 ldap_groups_whitelist: |
   cn=ocp-users,cn=groups,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com
   cn=ocp-platform,cn=groups,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com
   cn=ocp-production,cn=groups,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com
   cn=paymentapp,cn=groups,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com
   cn=portalapp,cn=groups,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com
-
-# LDAP base for finding groups
-ldap_groups_search_base: cn=groups,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com
 EOF**
 --------------------------------------------------------------------------------
 
 . Commit and push changes to your Git repository:
 +
+Add files with changes to be included in next commit:
 [subs=+quotes]
 --------------------------------------------------------------------------------
 $ *git add .applier/group_vars/seed-hosts/auth.yml .applier/ldap-ca.crt \
     requirements.yml templates/cluster-gitops.yaml*
+--------------------------------------------------------------------------------
++
+Commit changes to your git working directory:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
 $ *git commit -m "Update settings for initial lab run"*
 [master 00805da] Update to forked repo in requirements.yml
  1 file changed, 1 insertion(+), 1 deletion(-)
+--------------------------------------------------------------------------------
++
+Push your commit to your GitHub repository, authenticating when prompted:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
 $ *git push origin master*
 Username for \'https://github.com': **__GITHUB_USER__**
 Password for \'https://__GITHUB_USER__@github.com':
@@ -231,9 +273,11 @@ to authenticate for the `git push` command.
 Configure Eunomia
 ~~~~~~~~~~~~~~~~
 
-Configure Eunomia using `openshift-applier`:
+You will configure Eunomia using `openshift-applier` using the same repository that will be used by Eunomia.
+This means that once complete, Eunomia will be able to reconfigure itself on the running cluster.
+This also means that all configuration can be processed and validated using `openshift-applier` outside of Eunomia.
 
-. Install `openshift-applier` into the `galaxy` directory using the `ansible-galaxy` command line tool:
+. Install `openshift-applier` into the `galaxy` directory using the `ansible-galaxy` command line tool using the provided `requirements.yml`:
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
@@ -243,6 +287,8 @@ $ *ansible-galaxy install -r requirements.yml -p galaxy*
 - extracting self to /home/lab-user/operationalizing-openshift-lab/galaxy/self
 - self (master) was installed successfully
 --------------------------------------------------------------------------------
++
+This step also validates that your GitOps repository `requirements.yml` is correctly configured.
 
 . Set and export the `LDAP_BIND_PASSWORD` environment variable as it will be added to the set of cluster _secrets_ required in later portions of the lab:
 +
@@ -253,17 +299,20 @@ $ *export LDAP_BIND_PASSWORD=xxxxxx*
 +
 NOTE: The LDAP bind password is included in the authentication unit of the "Red Hat OpenShift Container Platform 4 Configuration" course in the learning management system.
 
-. Configure cluster secrets by running `openshift-applier` with the objects tagged "cluster-secrets":
+. Configure cluster secrets by running `openshift-applier` with the objects tagged "cluster-secrets".
++
+This step configures values that will not be available during Eunomia processing.
+In this lab this is just the LDAP bind password.
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
 $ *ansible-playbook -i .applier/ galaxy/openshift-applier/playbooks/openshift-cluster-seed.yml \
-  -e include_tags=cluster-secrets -e exclude_tags=*
+  -e include_tags=cluster-secrets -e exclude_tags=""*
 --------------------------------------------------------------------------------
 +
 NOTE: We must override `exclude_tags` to set cluster secrets because this variable is set in `.applier/group_vars/seed-hosts/main.yml` to exclude the `cluster-secrets` tag.
 
-. Configure Eunomia:
+. Create Eunomia GitOpsConfig by running `openshift-applier` with the objects tagged "gitops":
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
@@ -271,7 +320,10 @@ $ *ansible-playbook -i .applier/ galaxy/openshift-applier/playbooks/openshift-cl
   -e include_tags=gitops*
 --------------------------------------------------------------------------------
 
-. Check Eunomia Configuration
+. Check Eunomia Configuration created by `openshift-applier`.
++
+You should find a GitOpsConfig resource has been created in the `cluster-config` namespace.
+Check the references to your GitHub repository in the GitOpsConfig:
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
@@ -309,13 +361,21 @@ spec:
   - type: Change
 --------------------------------------------------------------------------------
 
-. Check Eunomia Job completion:
+. Check Eunomia job completion.
++
+The change trigger on the GitOpsConfig will cause Eunomia to immediately process by creating a kubernetes job in the same directory as the GitOpsConfig.
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
 $ *oc get job -n cluster-config*
 NAME                                 COMPLETIONS   DURATION   AGE
 gitopsconfig-cluster-config-gtvzhi   1/1           52s        2m50s
+--------------------------------------------------------------------------------
++
+The Eunomia job log shows the output of `openshift-applier` running the same Ansible playbook as we used to configure cluster secrets and gitops:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
 $ *oc logs -n cluster-config job/gitopsconfig-cluster-config-gtvzhi --tail=10*
 
 RUNNING HANDLER [openshift-applier : Clean up temporary Jinja directory]
@@ -334,14 +394,38 @@ It is possible that the node where the job ran will terminate before the logs ca
 
 . Confirm Eunomia has reconfigured the cluster by testing login.
 +
-First confirm that the OAuth configuration has been updated:
+First confirm that the OAuth configuration has been updated.
+The oauth resource named "cluster" should have the `spec.identityProviders` now configured for LDAP authentication:
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
-$ *oc get oauth.config.openshift.io -o yaml*
-... OUTPUT OMITTED ...
+$ **oc get oauth cluster -o yaml | grep identityProviders: -A22**
+  identityProviders:
+  - challenge: true
+    ldap:
+      attributes:
+        email:
+        - mail
+        id:
+        - dn
+        name:
+        - cn
+        preferredUsername:
+        - uid
+      bindDN: uid=admin,cn=users,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com
+      bindPassword:
+        name: ldap-bind-password
+      ca:
+        name: ldap-tls-ca
+      insecure: false
+      url: ldap://ipa.shared.example.opentlc.com/cn=users,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com?uid?sub?(memberOf=cn=ocp-users,cn=groups,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com)
+    login: true
+    mappingMethod: claim
+    name: LDAP
+    type: LDAP
 --------------------------------------------------------------------------------
-Then get the cluster console URL:
++
+Next get the cluster console URL:
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
@@ -349,19 +433,21 @@ $ *oc whoami --show-console*
 https://console-openshift-console.apps.example.com
 --------------------------------------------------------------------------------
 +
-Test login with user "karla" or "andrew" using the same password as was used for LDAP bind.
+Now test login with user "karla" or "andrew" using the same password as was used for LDAP bind.
 
 GitOps in Action
 ----------------
 
+In this section of the lab you will explore a few scenarios where you reconfigure the cluster using GitOps patterns.
+
 LDAP Group Sync Reconfiguration
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The initial parameters we used to configure LDAP group sync configured a cronjob to run every five minutes.
+The initial parameters you used to configure LDAP group sync configured a cronjob to run every five minutes.
 Now that you have given it a little time to run, you will now configure it to run hourly instead.
-LDAP group sync was configured using an OpenShift template, so we will begin by exploring how the template was invoked and then reconfigure the parameter passed to the template to set the schedule.
+LDAP group sync was configured using an OpenShift template, so you will begin by exploring how the template was invoked and then reconfigure the parameter passed to the template to set the schedule.
 
-. Check the initial cronjob schelude for LDAP group sync:
+. Check the initial cronjob schedule for LDAP group sync:
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
@@ -369,44 +455,50 @@ $ **oc get cronjob -n openshift-config**
 NAME                     SCHEDULE     SUSPEND   ACTIVE   LAST SCHEDULE   AGE
 cronjob-ldap-group-sync  */5 * * * *  False     0        3m30s           91m
 --------------------------------------------------------------------------------
++
+This cron time specification indicates the job should run every 5 minutes.
 
-. Examine the link:templates/ldap-group-sync.yaml[templates/ldap-group-sync.yaml] template and identify the parameter that controls the schedule:
+. Examine the link:templates/ldap-group-sync.yaml[templates/ldap-group-sync.yaml] template and identify the parameter that controls the schedule.
++
+The `oc process --parameters` command can be used to extract the description of available parameters:
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
 $ *oc process --parameters -f ./templates/ldap-group-sync.yaml*
-NAME                               DESCRIPTION                                                                     GENERATOR           VALUE
-NAMESPACE                          Name of the Namespace where to deploy the Scheduled Job                                             openshift-config
-JOB_NAME                           Name of the Scheduled Job to Create.                                                                cronjob-ldap-group-sync
-*SCHEDULE                           Cron Schedule to Execute the Job                                                                    @hourly*
-JOB_SERVICE_ACCOUNT                Name of the Service Account To Exeucte the Job As.                                                  ldap-group-syncer
-LDAP_CA_CONFIGMAP                  Name of the ConfigMap containing the LDAP Certificate Authority                                     ldap-tls-ca
-BIND_PASSWORD_SECRET               Name of the Secret containing the LDAP bind password                                                ldap-bind-password
-LDAP_CONFIG_VOLUME_PATH            Mount path of LDAP configuration files                                                              /ldap-sync
-LDAP_CA_FILENAME                   Name of the LDAP CA file                                                                            ca.crt
-LDAP_BIND_PASSWORD_FILENAME        Name of the LDAP bind password file                                                                 bindPassword
-LDAP_GROUPS_SEARCH_BASE            Location in LDAP tree where you will find groups
-LDAP_GROUPS_FILTER                 LDAP Filter to use when deciding which groups to sync into OpenShift                                (objectClass=groupofnames)
-LDAP_GROUP_NAME_ATTRIBUTES         The attribute list to use to discover the name for the group.                                       ["cn"]
-LDAP_GROUP_MEMBERSHIP_ATTRIBUTES                                                                                                       ["member"]
-LDAP_GROUP_UID_ATTRIBUTE           The attribute that uniquely identifies a group on the LDAP server.                                  dn
-LDAP_GROUPS_WHITELIST              File content for groups sync --whitelist option
-LDAP_URL                           URL of you LDAP server
-LDAP_BIND_DN                       The Full DN for the user you wish to use to authenticate to LDAP
-LDAP_USERS_SEARCH_BASE             Location in LDAP tree where you will find users
-LDAP_SYNC_CONFIGMAP                Name for the config map storing the group sync config                                               ldap-group-sync
-LDAP_USER_UID_ATTRIBUTE            The attribute that uniquely identifies a user on the LDAP server.                                   dn
-LDAP_USER_NAME_ATTRIBUTES          JSON list of attributes to use to discover the user name for group membership                       ["uid"]
-LDAP_BIND_PASSWORD_SECRET          The name for the secret in which to store the bind password                                         ldap-bind-password
-SUCCESS_JOBS_HISTORY_LIMIT         The number of successful jobs that will be retained                                                 5
-FAILED_JOBS_HISTORY_LIMIT          The number of failed jobs that will be retained                                                     5
-IMAGE                              Image to use for the container.                                                                     registry.redhat.io/openshift4/ose-cli
-IMAGE_TAG                          Image Tag to use for the container.                                                                 4.1
-LDAP_SYNC_CONFIGMAP                Name for the config map storing the group sync config                                               ldap-group-sync
-LDAP_CA_CONFIGMAP                  Name for the config map storing the TLS certificate authority                                       ldap-tls-ca
+NAME                              DESCRIPTION                                                                    VALUE
+NAMESPACE                         Name of the Namespace where to deploy the Scheduled Job                        openshift-config
+JOB_NAME                          Name of the Scheduled Job to Create.                                           cronjob-ldap-group-sync
+*SCHEDULE                          Cron Schedule to Execute the Job                                               @hourly*
+JOB_SERVICE_ACCOUNT               Name of the Service Account To Exeucte the Job As.                             ldap-group-syncer
+LDAP_CA_CONFIGMAP                 Name of the ConfigMap containing the LDAP Certificate Authority                ldap-tls-ca
+BIND_PASSWORD_SECRET              Name of the Secret containing the LDAP bind password                           ldap-bind-password
+LDAP_CONFIG_VOLUME_PATH           Mount path of LDAP configuration files                                         /ldap-sync
+LDAP_CA_FILENAME                  Name of the LDAP CA file                                                       ca.crt
+LDAP_BIND_PASSWORD_FILENAME       Name of the LDAP bind password file                                            bindPassword
+LDAP_GROUPS_SEARCH_BASE           Location in LDAP tree where you will find groups
+LDAP_GROUPS_FILTER                LDAP Filter to use when deciding which groups to sync into OpenShift           (objectClass=groupofnames)
+LDAP_GROUP_NAME_ATTRIBUTES        The attribute list to use to discover the name for the group.                  ["cn"]
+LDAP_GROUP_MEMBERSHIP_ATTRIBUTES                                                                                 ["member"]
+LDAP_GROUP_UID_ATTRIBUTE          The attribute that uniquely identifies a group on the LDAP server.             dn
+LDAP_GROUPS_WHITELIST             File content for groups sync --whitelist option
+LDAP_URL                          URL of you LDAP server
+LDAP_BIND_DN                      The Full DN for the user you wish to use to authenticate to LDAP
+LDAP_USERS_SEARCH_BASE            Location in LDAP tree where you will find users
+LDAP_SYNC_CONFIGMAP               Name for the config map storing the group sync config                          ldap-group-sync
+LDAP_USER_UID_ATTRIBUTE           The attribute that uniquely identifies a user on the LDAP server.              dn
+LDAP_USER_NAME_ATTRIBUTES         JSON list of attributes to use to discover the user name for group membership  ["uid"]
+LDAP_BIND_PASSWORD_SECRET         The name for the secret in which to store the bind password                    ldap-bind-password
+SUCCESS_JOBS_HISTORY_LIMIT        The number of successful jobs that will be retained                            5
+FAILED_JOBS_HISTORY_LIMIT         The number of failed jobs that will be retained                                5
+IMAGE                             Image to use for the container.                                                registry.redhat.io/openshift4/ose-cli
+IMAGE_TAG                         Image Tag to use for the container.                                            4.1
+LDAP_SYNC_CONFIGMAP               Name for the config map storing the group sync config                          ldap-group-sync
+LDAP_CA_CONFIGMAP                 Name for the config map storing the TLS certificate authority                  ldap-tls-ca
 --------------------------------------------------------------------------------
++
+The `SCHEDULE` template parameter is used to set the cron job schedule.
 
-. Identify the connection between the OpenShift template parameter, `SCHEDULE` and the Ansible variable, `ldap_cron_schedule`:
+. Identify the connection between the OpenShift template parameter, `SCHEDULE` and the Ansible inventory:
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
@@ -433,8 +525,13 @@ $ *grep SCHEDULE -C10 ./.applier/group_vars/seed-hosts/main.yml*
       ENCRYPT_STORAGE: "{{ aws_sc_encrypt_storage }}"
     namespace: openshift-config
 --------------------------------------------------------------------------------
++
+The `params_from_vars` option under the `openshift_cluster_content` object content provides the `openshift-applier` ansible role the mapping from Ansible values to template parameters.
+In this configuration, `SCHEDULE` is set based on the value of `ldap_cron_schedule`.
 
-. Identify where the `ldap_cron_schedule` variable is set in seed-hosts Ansible group variables:
+. Identify where the `ldap_cron_schedule` variable is set.
+As we saw when configuring authentication, the `seed-hosts` group in the `openshift-applier` inventory is configured in `.applier/group_vars/seed-hosts`.
+Use `grep` to find where in the Ansible inventory `ldap_cron_schedule` is set:
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
@@ -442,16 +539,22 @@ $ **grep ^ldap_cron_schedule -B1 .applier/group_vars/seed-hosts/***
 .applier/group_vars/seed-hosts/auth.yml-# LDAP group sync configuration
 .applier/group_vars/seed-hosts/auth.yml:ldap_cron_schedule: "*/5 * * * *"
 --------------------------------------------------------------------------------
++
+NOTE: The `-B1` option to grep is shown here to include context of one line before the match.
 
-. Set `ldap_cron_schedule` to `@hourly`:
+. Set `ldap_cron_schedule` to `@hourly` within `.applier/group_vars/seed-hosts/auth.yml`:
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
 $ **sed -i \'s|^ldap_cron_schedule:.*|ldap_cron_schedule: "@hourly"|' \
    .applier/group_vars/seed-hosts/auth.yml**
 --------------------------------------------------------------------------------
++
+NOTE: `@hourly` is a convenient shorthand for hourly cron jobs. It is equivalent to `0 * * * *`.
 
-. Git add/commit/push:
+. Git add/commit/push your changes to your GitHub repository:
++
+Use `git add -p` to review changes and queue them for your next commit:
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
@@ -471,9 +574,21 @@ index 0015fe1..57e3461 100644
  ldap_groups_search_base: cn=groups,cn=accounts,dc=example,dc=com
 Stage this hunk [y,n,q,a,d,/,j,J,g,e,?]? **y**
 
+--------------------------------------------------------------------------------
++
+Use `git commit` to commit changes to the "master" branch:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
 $ **git commit -m "Set ldap group sync to hourly"**
 [master d4f7a8f] Set ldap group sync to hourly
  1 file changed, 1 insertions(+), 1 deletions(-)
+--------------------------------------------------------------------------------
++
+Push your commit to your GitHub repository, authenticating when prompted:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
 $ **git push origin master**
 Username for \'https://github.com': **__GITHUB_USER__**
 Password for \'https://__GITHUB_USER__@github.com':
@@ -487,7 +602,7 @@ To https://github.com/__GITHUB_ACCOUNT__/operationalizing-openshift-lab.git
    3a51662..d4f7a8f  master -> master
 --------------------------------------------------------------------------------
 
-. Trigger Eunomia processing:
+. Trigger Eunomia processing by setting the `trigger-update` annotation to the current timestamp:
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
@@ -495,7 +610,8 @@ $ **oc annotate --overwrite -n cluster-config gitopsconfig cluster-config trigge
 gitopsconfig.eunomia.kohls.io/cluster-config annotated
 --------------------------------------------------------------------------------
 +
-NOTE: Eunomia webhook support is under development. In the future a webhook from GitHub could trigger processing.
+NOTE: Eunomia webhook support is under development.
+To speed up processing a webhook from GitHub will trigger processing.
 
 . Check that Eunomia has started a new job to apply the changes:
 +
@@ -506,8 +622,10 @@ NAME                                 COMPLETIONS   DURATION   AGE
 gitopsconfig-cluster-config-7u9lld   1/1           58s        5m43s
 gitopsconfig-cluster-config-8ziqr8   1/1           44s        47s
 --------------------------------------------------------------------------------
++
+You may need to wait for job completion or inspect job logs as shown previously.
 
-. Verify the cronjob schedule update:
+. Verify the cronjob schedule has been updated after Eunomia job completion:
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
@@ -525,21 +643,54 @@ Let's configure Eunomia to run periodically jobs.
 
 . Edit the template `cluster-gitops.yaml` template to add a `SCHEDULE` parameter:
 +
-[subs=+quotes]
+Find the two commented lines in the provided template and enabel periodic processing using the `"${SCHEDULE}"` parameter value for the `cron` value.
+Once updated the triggers for the GitOpsConfig should read:
++
 --------------------------------------------------------------------------------
-$ **sed -ri \'s/#(- type: Periodic)/\1/' templates/cluster-gitops.yaml**
-$ **sed -i \'s/#cron: .*/cron: "${SCHEDULE}"/' templates/cluster-gitops.yaml**
-$ **cat >>templates/cluster-gitops.yaml <<EOF
-  - name: SCHEDULE
-    description: Periodic scheludle for gitops processing
-    value: "@hourly"
-EOF**
+    triggers:
+    - type: Change
+    - type: Periodic
+      cron: "${SCHEDULE}"
 --------------------------------------------------------------------------------
 +
+Next add the `SCHEDULE` parameter to the template definition with the default value of `@hourly`:
++
+--------------------------------------------------------------------------------
+- name: SCHEDULE
+  description: Periodic scheludle for gitops processing
+  value: "@hourly"
+--------------------------------------------------------------------------------
++
+The following commands can be used for this change, though manually editing the file is recommended:
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ **sed -i \'s/#- type: Periodic/- type: Periodic/' templates/cluster-gitops.yaml**
+$ **sed -i \'s/#cron: .*/cron: "${SCHEDULE}"/' templates/cluster-gitops.yaml**
+$ **cat >>templates/cluster-gitops.yaml <<EOF
+- name: SCHEDULE
+  description: Periodic scheludle for gitops processing
+  value: "@hourly"
+EOF**
+--------------------------------------------------------------------------------
 NOTE: The above commands are provided help you move quickly through the lab, but it is better to actually open the file in a text editor and update it in the normal way.
 
 . It would be even more useful if we could set the schedule with an ansible parameter.
-Add a mapping for the Ansible variable, `gitops_schedule` to set the template `SCHEDULE` parameter:
+Add a mapping for the Ansible variable, `gitops_schedule` to set the template `SCHEDULE` parameter.
++
+This edit is made in the `.applier/group_vars/seed-hosts/main.yml`, where the `openshift_cluster_content` variable is set.
+Find the `GitOps Config` content item and add a `params_from_vars` setting to map the Ansible variable `gitops_schedule` to the template `SCHEDULE` parameter.
+The updated content item should read:
++
+--------------------------------------------------------------------------------
+  - name: GitOps Config
+    params_from_vars:
+      SCHEDULE: "{{ gitops_schedule }}"
+    template: "{{ inventory_dir }}/../templates/cluster-gitops.yaml"
+    tags:
+    - gitops
+--------------------------------------------------------------------------------
++
+A `sed` command to make this edit to `.applier/group_vars/seed-hosts/main.yml` is:
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
@@ -676,6 +827,8 @@ spec:
     enabled: true
     unneededTime: 5m
 --------------------------------------------------------------------------------
++
+For this exercise you will add variables for setting the `cores` and `memory` resource limits.
 
 . Identify the source of the autoscaler configuration:
 +
@@ -696,8 +849,17 @@ We will focus on adding a Jinja2 template for the ClusterAutoscaler.
 --------------------------------------------------------------------------------
 $ **git mv manifests/clusterautoscaler.yaml templates/clusterautoscaler.j2**
 --------------------------------------------------------------------------------
++
+Using `git mv` renames the file while retaining version control history.
 
 . Update the reference the file path for the cluster autoscaler configuration in `openshift_cluster_content` in the file `.applier/group_vars/seed-hosts/main.yml`:
++
+Within the definition of `openshift_cluster_content` and find the "OpenShift Machine API" object and the content item "ClusterAutoscaler" within it.
+The current value fo this item is `file: "{{ inventory_dir }}/../manifests/clusterautoscaler.yaml"`.
+Change this to `file: "{{ inventory_dir }}/../templates/clusterautoscaler.j2"`.
+Note that we keep the `file` processing as the output of the template is a resource definition rather than an OpenShift template definition.
++
+A single command to make this edit to `.applier/group_vars/seed-hosts/main.yml` is:
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
@@ -706,6 +868,10 @@ $ **sed -i "s|manifests/clusterautoscaler.yaml|templates/clusterautoscaler.j2|" 
 --------------------------------------------------------------------------------
 
 . Update `templates/clusterautoscaler.j2` to add variables for max and min cpus and memory:
++
+Change the resource limits `cores` and `memory` values for `min` and `max` to use variables `cluster_autoscaler_cores_min`, `cluster_autoscaler_cores_max`, `cluster_autoscaler_memory_min`, and `cluster_autoscaler_memory_max` using the current values as defaults.
++
+A single command to overwrite `templates/clusterautoscaler.j2` making these changes is:
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
@@ -734,11 +900,12 @@ spec:
 EOF**
 --------------------------------------------------------------------------------
 
-. Add settings for the new variables in `.applier/group_vars/seed-hosts/openshift-machine-api.yml`:
+. Add configuration for the new variables in `.applier/group_vars/seed-hosts/openshift-machine-api.yml`, doubling the default values observed previously:
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
 $ **cat >>.applier/group_vars/seed-hosts/openshift-machine-api.yml <<EOF
+---
 cluster_autoscaler_cores_min: 16
 cluster_autoscaler_cores_max: 256
 cluster_autoscaler_memory_min: 8
@@ -820,7 +987,7 @@ To git@github.com:__GITHUB_ACCOUNT__/operationalizing-openshift-lab.git
    2fa5a16..5c02182  master -> master
 --------------------------------------------------------------------------------
 
-. Trigger Eunomia processing:
+. Trigger Eunomia processing by setting the `trigger-update` annotation to the current timestamp:
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
@@ -862,6 +1029,8 @@ spec:
     enabled: true
     unneededTime: 5m
 --------------------------------------------------------------------------------
++
+Note the increased values for resource limits for `cores` and `memory`.
 
 Further Steps:
 ~~~~~~~~~~~~~~
