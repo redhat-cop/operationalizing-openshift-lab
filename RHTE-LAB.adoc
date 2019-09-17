@@ -1475,7 +1475,7 @@ Update the `build_version` variable in `.applier/group_vars/seed-hosts/vars.yml`
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
-$ **sed -i 's|build_version:.*|build_version: v1.0-2|' .applier/group_vars/seed-hosts/vars.yml**
+$ **sed -i \'s|build_version:.*|build_version: v1.0-2|' .applier/group_vars/seed-hosts/vars.yml**
 --------------------------------------------------------------------------------
 +
 Add this change and commit to git:
@@ -1495,7 +1495,7 @@ index 8f2e2ad..1c0757d 100644
  prod_version: v1.0-1
 Stage this hunk [y,n,q,a,d,/,e,?]? **y**
 
-$ **git commit -m 'Update build_version to v1.0-2'**
+$ **git commit -m \'Update build_version to v1.0-2'**
 [master 87304ca] Update build_version to v1.0-2
  1 file changed, 1 insertion(+), 1 deletion(-)
 --------------------------------------------------------------------------------
@@ -1557,7 +1557,7 @@ Update the `dev_version` variable in `.applier/group_vars/seed-hosts/vars.yml`:
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
-$ **sed -i 's|dev_version:.*|dev_version: v1.0-2|' .applier/group_vars/seed-hosts/vars.yml**
+$ **sed -i \'s|dev_version:.*|dev_version: v1.0-2|' .applier/group_vars/seed-hosts/vars.yml**
 --------------------------------------------------------------------------------
 +
 [subs=+quotes]
@@ -1576,7 +1576,7 @@ index 1c0757d..108b70c 100644
  prod_version: v1.0-1
 Stage this hunk [y,n,q,a,d,/,e,?]? y
 
-$ **git commit -m 'Release v1.0-2 to dev'**
+$ **git commit -m \'Release v1.0-2 to dev'**
 [master 6fbc6b5] Release v1.0-2 to dev
  1 file changed, 1 insertion(+), 1 deletion(-)
 $ **git push origin master**
@@ -1647,7 +1647,7 @@ index 108b70c..1c0757d 100644
  prod_version: v1.0-1
 Stage this hunk [y,n,q,a,d,/,e,?]? y
 
-$ **git commit -m 'Rollback dev to v1.0-1'**
+$ **git commit -m \'Rollback dev to v1.0-1'**
 [master 6a88c09] Rollback dev to v1.0-1
  1 file changed, 1 insertion(+), 1 deletion(-)
 $ **git push origin master**
