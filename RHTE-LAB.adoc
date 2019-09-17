@@ -1360,8 +1360,8 @@ rolebinding.rbac.authorization.k8s.io/system:image-pullers:cakephp-sbx created
 [subs=+quotes]
 --------------------------------------------------------------------------------
 $ **oc get build**
-NAME       TYPE    FROM  STATUS    STARTED             DURATION
-cakephp-1  Source  Git   Complete  About a minute ago  1m47s
+NAME       TYPE    FROM         STATUS    STARTED        DURATION
+cakephp-1  Source  Git@62a091d  Complete  2 minutes ago  1m51s
 --------------------------------------------------------------------------------
 
 . Verify that the application and database have deployed:
@@ -1382,6 +1382,8 @@ $ **oc get route**
 NAME      HOST/PORT                                                            PATH   SERVICES   PORT    TERMINATION   WILDCARD
 cakephp   cakephp-cakephp-sbx.apps.cluster-1b5b.1b5b.sandbox1485.opentlc.com          cakephp    <all>                 None
 --------------------------------------------------------------------------------
++
+NOTE: It may take a few minutes for the database to initialize and the application to start for the first time.
 
 . Add some missing documentation to the application home page template:
 +
@@ -1396,7 +1398,7 @@ A `sed` command to make this edit is:
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
-$ **sed -i '/# Within your project directory/i # Test build from local source before commit\n$ oc start-build cakephp-example --from-dir=.\n' \
+$ **sed -i \'/# Within your project directory/i # Test build from local source before commit\n$ oc start-build cakephp-example --from-dir=.\n' \
   ./src/Template/Pages/home.ctp**
 --------------------------------------------------------------------------------
 
@@ -1413,6 +1415,16 @@ build.build.openshift.io/cakephp-2 started
 
 . Wait for the build to finish then observe that a new deployment of the deployment config in your sandbox is triggered automatically.
 When the build finishes, recheck the webpage and confirm that the new content appears.
++
+You can follow the build logs with:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ **oc logs -f build/cakephp-2**
+--------------------------------------------------------------------------------
++
+After the build completes wait for the new deployment to trigger and complete then check the web page content by refreshing your browser.
+You should see the instruction regarding "Test build from local source before commit" that you added.
 
 . Now that you have tested your new code running with an OpenShift build in a container you are ready to commit and push:
 +
@@ -1442,7 +1454,7 @@ And commit to git:
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
-$ **git commit -m 'Add home page content'**
+$ **git commit -m \'Add home page content'**
 [master ec4f9e6] Add home page content
  4 files changed, 32 insertions(+)
 --------------------------------------------------------------------------------
