@@ -1080,6 +1080,8 @@ $ **sed -r -i "s|https://raw.githubusercontent.com/redhat-gpte-devopsautomation/
 
 . Git add/commit/push
 +
+Add all changes for commit. You may use `-p` as shown previously to review all changes.
++
 [subs=+quotes]
 --------------------------------------------------------------------------------
 $ **git add openshift/\*/*.yml .applier/group_vars/seed-hosts/main.yml**
@@ -1171,7 +1173,7 @@ gitopsconfig-cakephp-pd3pu1   1/1           56s        71s
 Upon completion the GitOps resources and deployments will have been created.
 Now we need to show how to use GitOps with application pipelines.
 
-. Pipeline verification:
+. Verify application build and deployment:
 +
 Verify that the `openshift/multi-project-templates/cakephp-build.yml` template has created an OpenShift build config in the `cakephp-build` namespace:
 +
