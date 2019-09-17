@@ -234,6 +234,7 @@ EOF**
 . Commit and push changes to your Git repository:
 +
 Add files with changes to be included in next commit:
++
 [subs=+quotes]
 --------------------------------------------------------------------------------
 $ *git add .applier/group_vars/seed-hosts/auth.yml .applier/ldap-ca.crt \
@@ -662,6 +663,7 @@ Next add the `SCHEDULE` parameter to the template definition with the default va
 --------------------------------------------------------------------------------
 +
 The following commands can be used for this change, though manually editing the file is recommended:
++
 [subs=+quotes]
 --------------------------------------------------------------------------------
 $ **sed -i \'s/#- type: Periodic/- type: Periodic/' templates/cluster-gitops.yaml**
@@ -672,6 +674,7 @@ $ **cat >>templates/cluster-gitops.yaml <<EOF
   value: "@hourly"
 EOF**
 --------------------------------------------------------------------------------
++
 NOTE: The above commands are provided help you move quickly through the lab, but it is better to actually open the file in a text editor and update it in the normal way.
 
 . It would be even more useful if we could set the schedule with an ansible parameter.
@@ -728,7 +731,7 @@ Stage this hunk [y,n,q,a,d,/,e,?]? **y**
 diff --git a/templates/cluster-gitops.yaml b/templates/cluster-gitops.yaml
 index ef67ab2..7148576 100644
 --- a/templates/cluster-gitops.yaml
-+++ b/templates/cluster-gitops.yaml
+\+++ b/templates/cluster-gitops.yaml
 @@ -35,8 +35,8 @@ objects:
        contextDir: ${CLUSTER_CONFIG_REPO_DIR}
      triggers:
@@ -936,7 +939,7 @@ Stage this hunk [y,n,q,a,d,/,e,?]? **y**
 diff --git a/.applier/group_vars/seed-hosts/openshift-machine-api.yml b/.applier/group_vars/seed-hosts/openshift-machine-api.yml
 index 8d3022b..b41134a 100644
 --- a/.applier/group_vars/seed-hosts/openshift-machine-api.yml
-+++ b/.applier/group_vars/seed-hosts/openshift-machine-api.yml
+\+++ b/.applier/group_vars/seed-hosts/openshift-machine-api.yml
 @@ -16,3 \+16,7 @@ machineset_custom_groups:
      value:
        instanceType: m5.4xlarge
@@ -951,7 +954,7 @@ Stage this hunk [y,n,q,a,d,/,s,e,?]? **y**
 diff --git a/templates/clusterautoscaler.j2 b/templates/clusterautoscaler.j2
 index 2fe9de5..f9b6834 100644
 --- a/templates/clusterautoscaler.j2
-+++ b/templates/clusterautoscaler.j2
+\+++ b/templates/clusterautoscaler.j2
 @@ -8,11 +8,11 @@ spec:
    resourceLimits:
      maxNodesTotal: 24
@@ -1078,14 +1081,14 @@ $ **sed -r -i "s|https://raw.githubusercontent.com/redhat-gpte-devopsautomation/
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
-$ **git add openshift/*/*.yml .applier/group_vars/seed-hosts/main.yml**
+$ **git add openshift/\*/*.yml .applier/group_vars/seed-hosts/main.yml**
 --------------------------------------------------------------------------------
 +
 Commit changes:
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
-$ **git commit -m 'Update repository references'**
+$ **git commit -m \'Update repository references'**
 [master 1b9a1f6] Update repository references
  11 files changed, 39 insertions(+), 39 deletions(-)
 --------------------------------------------------------------------------------
@@ -1251,7 +1254,7 @@ Finally get the route for the `cakephp-app-dev` namespace...
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
-$ oc get route -n cakephp-app-dev
+$ **oc get route -n cakephp-app-dev**
 NAME      HOST/PORT                                                                PATH   SERVICES   PORT    TERMINATION   WILDCARD
 cakephp   cakephp-cakephp-app-dev.apps.cluster-1b5b.1b5b.sandbox1485.opentlc.com          cakephp    <all>                 None
 --------------------------------------------------------------------------------
@@ -1306,7 +1309,7 @@ EOF**
 --------------------------------------------------------------------------------
 $ **oc process -f openshift/multi-project-templates/cakephp-namespace-init.yml \
   --param-file=sandbox-params.yml \
-  | oc create -f -
+  | oc create -f -**
 secret/cakephp created
 secret/mysql created
 persistentvolumeclaim/mysql created
@@ -1318,9 +1321,9 @@ NOTE: We use `oc create` here because the namespace initialization should only r
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
-$ oc process -f openshift/multi-project-templates/cakephp-build.yml \
+$ **oc process -f openshift/multi-project-templates/cakephp-build.yml \
   --param-file=sandbox-params.yml --ignore-unknown-parameters \
-  | oc apply -f -
+  | oc apply -f -**
 imagestream.image.openshift.io/cakephp created
 buildconfig.build.openshift.io/cakephp created
 --------------------------------------------------------------------------------
@@ -1418,7 +1421,7 @@ $ **git add -p**
 diff --git a/src/Template/Pages/home.ctp b/src/Template/Pages/home.ctp
 index 3f304ce..3f468da 100644
 --- a/src/Template/Pages/home.ctp
-+++ b/src/Template/Pages/home.ctp
+\+++ b/src/Template/Pages/home.ctp
 @@ -28,6 +28,9 @@
 
  <pre>$ git clone &lt;git_url&gt; &lt;directory_to_create&gt;
@@ -1468,7 +1471,7 @@ $ **git add -p**
 diff --git a/.applier/group_vars/seed-hosts/vars.yml b/.applier/group_vars/seed-hosts/vars.yml
 index 8f2e2ad..1c0757d 100644
 --- a/.applier/group_vars/seed-hosts/vars.yml
-+++ b/.applier/group_vars/seed-hosts/vars.yml
+\+++ b/.applier/group_vars/seed-hosts/vars.yml
 @@ -1,4 +1,4 @@
 -build_version: v1.0-1
 +build_version: v1.0-2
@@ -1549,7 +1552,7 @@ $ **git add -p**
 diff --git a/.applier/group_vars/seed-hosts/vars.yml b/.applier/group_vars/seed-hosts/vars.yml
 index 1c0757d..108b70c 100644
 --- a/.applier/group_vars/seed-hosts/vars.yml
-+++ b/.applier/group_vars/seed-hosts/vars.yml
+\+++ b/.applier/group_vars/seed-hosts/vars.yml
 @@ -1,4 +1,4 @@
  build_version: v1.0-2
 -dev_version: v1.0-1
@@ -1620,7 +1623,7 @@ $ **git add -p**
 diff --git a/.applier/group_vars/seed-hosts/vars.yml b/.applier/group_vars/seed-hosts/vars.yml
 index 108b70c..1c0757d 100644
 --- a/.applier/group_vars/seed-hosts/vars.yml
-+++ b/.applier/group_vars/seed-hosts/vars.yml
+\+++ b/.applier/group_vars/seed-hosts/vars.yml
 @@ -1,4 +1,4 @@
  build_version: v1.0-2
 -dev_version: v1.0-2
