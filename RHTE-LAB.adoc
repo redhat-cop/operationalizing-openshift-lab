@@ -435,7 +435,7 @@ $ *oc whoami --show-console*
 https://console-openshift-console.apps.example.com
 --------------------------------------------------------------------------------
 +
-Now test login with user "karla" or "andrew" using the same password as was used for LDAP bind.
+Now test login with user "karla", "david", or "andrew" using the same password as was used for LDAP bind.
 
 GitOps in Action
 ----------------
