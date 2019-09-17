@@ -909,7 +909,6 @@ EOF**
 [subs=+quotes]
 --------------------------------------------------------------------------------
 $ **cat >>.applier/group_vars/seed-hosts/openshift-machine-api.yml <<EOF
----
 cluster_autoscaler_cores_min: 16
 cluster_autoscaler_cores_max: 256
 cluster_autoscaler_memory_min: 8
