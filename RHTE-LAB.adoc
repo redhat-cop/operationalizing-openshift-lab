@@ -1066,7 +1066,7 @@ Resolving deltas: 100% (1073/1073), done.
 [subs=+quotes]
 --------------------------------------------------------------------------------
 $ **sed -r -i "s|https://github.com/redhat-gpte-devopsautomation/|https://github.com/${GITHUB_ACCOUNT}/|"
-   openshift/*/*.yml**
+   openshift/\*/*.yml**
 --------------------------------------------------------------------------------
 
 . Update repository references in `.applier/group_vars/seed-hosts/main.yml`:
