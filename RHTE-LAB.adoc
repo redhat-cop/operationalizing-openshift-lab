@@ -1542,7 +1542,7 @@ cakephp-1   Source   Git@e580286   Complete   12 hours ago     2m1s
 cakephp-2   Source   Git@v1.0-2    Running    10 seconds ago
 --------------------------------------------------------------------------------
 +
-Once the build completes, confirm that a new image is available:
+Once the build completes, confirm that a new image is available with tag `v1.0-2`:
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
@@ -1599,15 +1599,19 @@ To https://github.com/__GITHUB_ACCOUNT__/cakephp-ex.git
 $ **oc annotate --overwrite -n cakephp-gitops gitopsconfig cakephp trigger-update=$(date +"%FT%TZ")**
 --------------------------------------------------------------------------------
 +
-Wait for dev deployment
+Wait for job completion and deployment to `cakephp-app-dev`.
++
+When complete you should see a new deployment has run:
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
-$ **oc get pod -n cakephp-db-dev**
-NAME             READY   STATUS      RESTARTS   AGE
-mysql-1-deploy   0/1     Completed   0          6h56m
-mysql-2-deploy   0/1     Completed   0          5m15s
-mysql-2-xvmj2    1/1     Running     0          4m58s
+$ **oc get pod -n cakephp-app-dev**
+NAME                 READY   STATUS      RESTARTS   AGE
+cakephp-1-deploy     0/1     Completed   0          25m
+cakephp-1-hook-pre   0/1     Completed   0          25m
+cakephp-2-deploy     0/1     Completed   0          77s
+cakephp-2-gf2bs      1/1     Running     0          54s
+cakephp-2-hook-pre   0/1     Completed   0          69s
 --------------------------------------------------------------------------------
 
 . Get the route for the application dev environment then check in your web browser for new content.
@@ -1625,7 +1629,7 @@ Set the `dev_version` variable back to `v1.0-1`:
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
-$ **sed -i 's|dev_version:.*|dev_version: v1.0-1|' .applier/group_vars/seed-hosts/vars.yml**
+$ **sed -i \'s|dev_version:.*|dev_version: v1.0-1|' .applier/group_vars/seed-hosts/vars.yml**
 --------------------------------------------------------------------------------
 +
 With this simple change we reconfigure not just to run with the previous image but also with the previous templated configuration.
