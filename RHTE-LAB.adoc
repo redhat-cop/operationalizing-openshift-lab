@@ -255,8 +255,8 @@ Push your commit to your GitHub repository, authenticating when prompted:
 [subs=+quotes]
 --------------------------------------------------------------------------------
 $ *git push origin master*
-Username for \'https://github.com': **__GITHUB_USER__**
-Password for \'https://__GITHUB_USER__@github.com':
+Username for \'https://github.com': **__GITHUB_ACCOUNT__**
+Password for \'https://__GITHUB_ACCOUNT__@github.com':
 Counting objects: 18, done.
 Delta compression using up to 2 threads.
 Compressing objects: 100% (9/9), done.
@@ -592,8 +592,8 @@ Push your commit to your GitHub repository, authenticating when prompted:
 [subs=+quotes]
 --------------------------------------------------------------------------------
 $ **git push origin master**
-Username for \'https://github.com': **__GITHUB_USER__**
-Password for \'https://__GITHUB_USER__@github.com':
+Username for \'https://github.com': **__GITHUB_ACCOUNT__**
+Password for \'https://__GITHUB_ACCOUNT__@github.com':
 Counting objects: 11, done.
 Delta compression using up to 2 threads.
 Compressing objects: 100% (5/5), done.
@@ -760,8 +760,8 @@ $ **git commit -m "Add schedule for gitops processing"**
  3 files changed, 8 insertions({plus}), 2 deletions(-)
  create mode 100644 .applier/group_vars/seed-hosts/gitops.yml
 $ **git push origin master**
-Username for 'https://github.com': **__GITHUB_USER__**
-Password for \'https://__GITHUB_USER__@github.com':
+Username for 'https://github.com': **__GITHUB_ACCOUNT__**
+Password for \'https://__GITHUB_ACCOUNT__@github.com':
 Counting objects: 16, done.
 Delta compression using up to 2 threads.
 Compressing objects: 100% (7/7), done.
@@ -1099,15 +1099,15 @@ Push changes to GitHub repository:
 [subs=+quotes]
 --------------------------------------------------------------------------------
 $ **git push origin master**
-Username for \'https://github.com': **__GITHUB_USER__**
-Password for \'https://__GITHUB_USER__@github.com':
+Username for \'https://github.com': **__GITHUB_ACCOUNT__**
+Password for \'https://__GITHUB_ACCOUNT__@github.com':
 Counting objects: 36, done.
 Delta compression using up to 2 threads.
 Compressing objects: 100% (18/18), done.
 Writing objects: 100% (19/19), 4.47 KiB | 0 bytes/s, done.
 Total 19 (delta 11), reused 0 (delta 0)
 remote: Resolving deltas: 100% (11/11), completed with 11 local objects.
-To https://github.com/__GITHUB_USER__/cakephp-ex.git
+To https://github.com/__GITHUB_ACCOUNT__/cakephp-ex.git
  + 1b9a1f6...713f8d6 master -> master (forced update)
 --------------------------------------------------------------------------------
 
@@ -1498,15 +1498,15 @@ Push commits and the new tag to GitHub:
 [subs=+quotes]
 --------------------------------------------------------------------------------
 $ **git push origin master v1.0-2**
-Username for \'https://github.com': **__GITHUB_USER__**
-Password for \'https://__GITHUB_USER__@github.com':
+Username for \'https://github.com': **__GITHUB_ACCOUNT__**
+Password for \'https://__GITHUB_ACCOUNT__@github.com':
 Counting objects: 31, done.
 Delta compression using up to 2 threads.
 Compressing objects: 100% (16/16), done.
 Writing objects: 100% (17/17), 1.68 KiB | 0 bytes/s, done.
 Total 17 (delta 9), reused 0 (delta 0)
 remote: Resolving deltas: 100% (9/9), completed with 8 local objects.
-To https://github.com/__GITHUB_USER__/cakephp-ex.git
+To https://github.com/__GITHUB_ACCOUNT__/cakephp-ex.git
    270ee9b..87304ca  master -> master
  * [new tag]         v1.0-2 -> v1.0-2
 --------------------------------------------------------------------------------
@@ -1566,15 +1566,15 @@ $ **git commit -m 'Release v1.0-2 to dev'**
 [master 6fbc6b5] Release v1.0-2 to dev
  1 file changed, 1 insertion(+), 1 deletion(-)
 $ **git push origin master**
-Username for \'https://github.com': **__GITHUB_USER__**
-Password for \'https://__GITHUB_USER__@github.com':
+Username for \'https://github.com': **__GITHUB_ACCOUNT__**
+Password for \'https://__GITHUB_ACCOUNT__@github.com':
 Counting objects: 11, done.
 Delta compression using up to 2 threads.
 Compressing objects: 100% (5/5), done.
 Writing objects: 100% (6/6), 528 bytes | 0 bytes/s, done.
 Total 6 (delta 1), reused 0 (delta 0)
 remote: Resolving deltas: 100% (1/1), completed with 1 local object.
-To https://github.com/__GITHUB_USER__/cakephp-ex.git
+To https://github.com/__GITHUB_ACCOUNT__/cakephp-ex.git
    1391022..6fbc6b5  master -> master
 --------------------------------------------------------------------------------
 
@@ -1637,8 +1637,8 @@ $ **git commit -m 'Rollback dev to v1.0-1'**
 [master 6a88c09] Rollback dev to v1.0-1
  1 file changed, 1 insertion(+), 1 deletion(-)
 $ **git push origin master**
-Username for \'https://github.com': **__GITHUB_USER__**
-Password for \'https://__GITHUB_USER__@github.com':
+Username for \'https://github.com': **__GITHUB_ACCOUNT__**
+Password for \'https://__GITHUB_ACCOUNT__@github.com':
 Counting objects: 11, done.
 Delta compression using up to 2 threads.
 Compressing objects: 100% (5/5), done.
