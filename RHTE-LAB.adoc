@@ -214,7 +214,7 @@ ldap_bind_password: >-
 
 # Location in LDAP for users and groups
 ldap_users_search_base: cn=users,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com
-ldap_groups_search_base: cn=groups,cn=accounts,dc=example,dc=com
+ldap_groups_search_base: cn=groups,cn=accounts,dc=shared,dc=example,dc=opentlc,dc=com
 
 # LDAP search filter URL used during authentication
 ldap_search_url: "{{ ldap_url }}/{{ ldap_users_search_base }}?uid?sub?{{ ldap_auth_search_filter }}"
