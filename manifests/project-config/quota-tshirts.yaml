@@ -17,6 +17,20 @@ spec:
       hard:
         requests.cpu: "4"
         requests.memory: "2Gi"
+  - apiVersion: v1
+    kind: LimitRange
+    metadata:
+      annotations:
+        openshift.io/quota-tier: small
+      labels:
+        quota-tier: small
+      name: limits
+    spec:
+      limits:
+      - defaultRequest:
+          cpu: 100m
+          memory: 512Mi
+        type: Container
 ---
 apiVersion: redhatcop.redhat.io/v1alpha1
 kind: NamespaceConfig
@@ -36,3 +50,17 @@ spec:
       hard:
         requests.cpu: "8"
         requests.memory: "4Gi"
+  - apiVersion: v1
+    kind: LimitRange
+    metadata:
+      annotations:
+        openshift.io/quota-tier: large
+      labels:
+        quota-tier: large
+      name: limits
+    spec:
+      limits:
+      - defaultRequest:
+          cpu: 100m
+          memory: 512Mi
+        type: Container
