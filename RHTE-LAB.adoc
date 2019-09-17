@@ -1078,6 +1078,31 @@ $ **sed -r -i "s|https://raw.githubusercontent.com/redhat-gpte-devopsautomation/
    .applier/group_vars/seed-hosts/main.yml**
 --------------------------------------------------------------------------------
 
+. Add a NetworkPolicy definition to the database template:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ **cat >>openshift/multi-project-templates/cakephp-mysql-persistent.yml <<EOF
+- kind: NetworkPolicy
+  apiVersion: networking.k8s.io/v1
+  metadata:
+    name: allow-frontend-to-database
+    namespace: ${DATABASE_NAMESPACE}
+  spec:
+    podSelector:
+      matchLabels:
+        name: ${DATABASE_SERVICE_NAME}
+    ingress:
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            name: ${FRONTEND_NAMESPACE}
+      ports:
+      - protocol: TCP
+        port: 3306
+EOF**
+--------------------------------------------------------------------------------
+
 . Git add/commit/push
 +
 Add all changes for commit. You may use `-p` as shown previously to review all changes.
@@ -1139,27 +1164,10 @@ The CakePHP example repository you are using is already configured for use with 
 [subs=+quotes]
 --------------------------------------------------------------------------------
 $ **oc process -f openshift/multi-project-templates/gitops.yml | oc apply -f -**
-namespace/cakephp-gitops created
-namespace/cakephp-build created
-namespace/cakephp-app-dev created
-namespace/cakephp-db-dev created
-namespace/cakephp-app-test created
-namespace/cakephp-db-test created
-namespace/cakephp-app-prod created
-namespace/cakephp-db-prod created
-serviceaccount/gitops-runner created
 gitopsconfig.eunomia.kohls.io/cakephp created
-rolebinding.rbac.authorization.k8s.io/gitops-runner-binding created
-rolebinding.rbac.authorization.k8s.io/gitops-runner-binding created
-rolebinding.rbac.authorization.k8s.io/gitops-runner-binding created
-rolebinding.rbac.authorization.k8s.io/gitops-runner-binding created
-rolebinding.rbac.authorization.k8s.io/gitops-runner-binding created
-rolebinding.rbac.authorization.k8s.io/gitops-runner-binding created
-rolebinding.rbac.authorization.k8s.io/gitops-runner-binding created
 --------------------------------------------------------------------------------
 +
-This has create a `cakephp-gitops` namespace as well as namespaces for dev, test, and prod environments for the application and database.
-Role-bindings have been created to give the GitOps service account access to manage the application namespaces and a GitOpsConfig has been created to automate further configuration through Eunomia.
+This has created a GitOpsConfig in the `cakephp-gitops` namespace for processing by Eunomia.
 
 . Eunomia should automatically respond to the creation of the GitOpsConfig by creating a GitOps job in the `cakephp-gitops` namespace:
 +
