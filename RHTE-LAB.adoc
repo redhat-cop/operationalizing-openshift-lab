@@ -1,6 +1,10 @@
 Operationalizing OpenShift Lab
 ==============================
 
+:toc-title:
+toc::[]
+
+
 In this lab we are going to develop an iterative and declarative approach to taking a new OpenShift Cluster from vanilla to operationalized.
 This repo should act as a resource for cluster administrators to begin the process of defining clusters as code.
 
@@ -393,11 +397,36 @@ Switched to context "current".
 NOTE: The configuration performed by this first job run reconfigures the openshift-machine-api, resulting in the worker nodes being replaced.
 It is possible that the node where the job ran will terminate before the logs can be retrieved.
 
-. Confirm Eunomia has reconfigured the cluster by testing login.
-+
+Exploring Our Newly Configured Cluster
+-------------------------------------
+
+At this point we expect to have a working GitOps workflow for our shiny new cluster. Let's take a few moments to examine the state of our cluster in greater detail.
+
+For this part of the Lab, we are going to take on the persona of *David*, a cluster administrator. Let's log in as `david`.
+
+[subs=+quotes]
+----
+$ *oc whoami --show-server*
+https://api.cluster-*<guid>*.*<guid>*.sandbox1485.opentlc.com:6443
+
+$ *oc login -u david https://api.cluster-<guid>.<guid>.sandbox1485.opentlc.com:6443*
+Logged into "https://api.cluster-<guid>.<guid>.sandbox1485.opentlc.com:6443" as "david" using existing credentials.
+
+You have access to 59 projects, the list has been suppressed. You can list all projects with 'oc projects'
+
+Using project "default".
+
+----
+
+=== Authentication and Authorization
+
+One of the first things we've done in this cluster is configured multi-user authentication to an external LDAP provider. This will allow us to have multiple different users logged into our cluster with various roles and policies applied.
+
+Let's confirm that our workflow has reconfigured the cluster by testing login.
+
 First confirm that the OAuth configuration has been updated.
 The oauth resource named "cluster" should have the `spec.identityProviders` now configured for LDAP authentication:
-+
+
 [subs=+quotes]
 --------------------------------------------------------------------------------
 $ **oc get oauth cluster -o yaml | grep identityProviders: -A22**
@@ -425,16 +454,139 @@ $ **oc get oauth cluster -o yaml | grep identityProviders: -A22**
     name: LDAP
     type: LDAP
 --------------------------------------------------------------------------------
-+
-Next get the cluster console URL:
-+
+
+We can also observe that we have several `Groups` already synced in our cluster
+
+[subs=+quotes]
+----
+$ *oc get groups*
+NAME             USERS
+ocp-platform     david, admin1, admin2, admin
+ocp-production   karla, prod1, prod2, admin
+ocp-users        andrew, marina, karla, david, portal1, portal2, payment1, payment2, prod1, prod2, platform1, platform2, admin1, admin2, admin
+paymentapp       marina, payment1, payment2
+portalapp        andrew, portal1, portal2
+----
+
+Now let's test the login capabilities. First we'll grab the cluster console URL:
+
 [subs=+quotes]
 --------------------------------------------------------------------------------
 $ *oc whoami --show-console*
 https://console-openshift-console.apps.example.com
 --------------------------------------------------------------------------------
-+
+
 Now test login with user "karla" or "andrew" using the same password as was used for LDAP bind.
+
+=== MachineSets and AutoScalers
+
+A common ask in the enterprise is for administrators  to create various customized types of nodes.
+This could be done for various purposes such as:
+
+* To protect infrastructure components from application workloads
+* To support workloads with varying resource needs (e.g. memory intensive vs. cpu intensive vs. GPU use cases)
+
+To simulate this we've configured a few machinesets which each manage a different flavor of node. You can see them with the following commands.
+
+[subs=+quotes]
+----
+$ *oc get machinesets -n openshift-machine-api*
+NAME                                            DESIRED   CURRENT   READY     AVAILABLE   AGE
+cluster-1b5b-fxs69-compute-ap-northeast-1a      1         1         1         1           18h
+cluster-1b5b-fxs69-compute-ap-northeast-1c      1         1         1         1           18h
+cluster-1b5b-fxs69-compute-ap-northeast-1d      0         0                               18h
+cluster-1b5b-fxs69-logging-es-ap-northeast-1a   1         1         1         1           18h
+cluster-1b5b-fxs69-logging-es-ap-northeast-1c   0         0                               18h
+cluster-1b5b-fxs69-logging-es-ap-northeast-1d   0         0                               18h
+cluster-1b5b-fxs69-worker-ap-northeast-1a       0         0                               41h
+cluster-1b5b-fxs69-worker-ap-northeast-1c       0         0                               41h
+cluster-1b5b-fxs69-worker-ap-northeast-1d       0         0                               41h
+
+$ *oc get nodes*
+NAME                                              STATUS    ROLES               AGE       VERSION
+ip-10-0-137-115.ap-northeast-1.compute.internal   Ready     logging-es,worker   18h       v1.13.4+ab8449285
+ip-10-0-139-108.ap-northeast-1.compute.internal   Ready     compute,worker      18h       v1.13.4+ab8449285
+ip-10-0-141-142.ap-northeast-1.compute.internal   Ready     master              41h       v1.13.4+ab8449285
+ip-10-0-147-132.ap-northeast-1.compute.internal   Ready     compute,worker      18h       v1.13.4+ab8449285
+----
+
+You'll notice that all of our non-master nodes still have the role of `worker`. This is the functionality that comes out of the box. But by provisioning our own `machinesets`, we have created "sub roles" for our machines of `compute` and `logging-es`, creating a class of dedicated nodes to run our logging infrastructure.
+
+We have additionally enabled auto scaling of each machineset so that the cluster will automatically add new nodes when the schedule comes under pressure.
+
+[subs=+quotes]
+----
+$ *oc get machineautoscalers -n openshift-machine-api*
+NAME                                         REF KIND     REF NAME                                     MIN       MAX       AGE
+cluster-1b5b-fxs69-compute-ap-northeast-1a   MachineSet   cluster-1b5b-fxs69-compute-ap-northeast-1a   1         2         18h
+cluster-1b5b-fxs69-compute-ap-northeast-1c   MachineSet   cluster-1b5b-fxs69-compute-ap-northeast-1c   1         2         18h
+cluster-1b5b-fxs69-compute-ap-northeast-1d   MachineSet   cluster-1b5b-fxs69-compute-ap-northeast-1d   0         2         18h
+----
+
+Feel free to experiment with deploying some pods such that the machine autoscalers will trigger a scale-up.
+
+=== Customized Project Creation
+
+Another common enterprise use case is to customize the project creation flow such that cluster administrators can maintain some control over the process.
+
+When a user creates a project in our cluster, we use the link:https://github.com/redhat-cop/namespace-configuration-operator[Namespace Configuration Operator] to apply custom rules to that project.
+
+The operator itself has been deployed to the cluster. You can examine the deployment with the following:
+
+[subs=+quotes]
+----
+$ *oc describe deployment namespace-configuration-operator -n namespace-configuration-operator*
+Name:                   namespace-configuration-operator
+Namespace:              namespace-configuration-operator
+...
+
+$ *oc get pods -n namespace-configuration-operator*
+NAME                                                READY     STATUS    RESTARTS   AGE
+namespace-configuration-operator-7f5d8dc966-db227   1/1       Running   0          18h
+
+$ *oc logs -n namespace-configuration-operator $(oc get pod -n namespace-configuration-operator -o name)*
+...
+{"level":"info","ts":1568627802.596237,"logger":"cmd","msg":"Starting the Cmd."}
+{"level":"info","ts":1568627802.6964204,"logger":"kubebuilder.controller","msg":"Starting Controller","controller":"namespaceconfig-controller"}
+{"level":"info","ts":1568627802.796626,"logger":"kubebuilder.controller","msg":"Starting workers","controller":"namespaceconfig-controller","worker count":1}
+{"level":"info","ts":1568627864.75009,"logger":"controller_namespaceconfig","msg":"Reconciling NamespaceConfig","Request.Namespace":"namespace-configuration-operator","Request.Name":"multitenant"}
+{"level":"info","ts":1568627864.7545173,"logger":"controller_namespaceconfig","msg":"Reconciling NamespaceConfig","Request.Namespace":"namespace-configuration-operator","Request.Name":"multitenant"}
+...
+$ *oc get namespaceconfig -n namespace-configuration-operator*
+NAME                    AGE
+cakephp-rolebindings    85m
+default-role-bindings   50m
+gitops                  50m
+large-size              18h
+multitenant             18h
+small-size              18h
+----
+
+When a user creates a project, custom rules will be applied based on labels placed on the project. We can see this through the following commands.
+
+[subs=+quotes]
+----
+$ *oc new-project test-project-policy*
+$ *oc get resourcequota*
+NAME         CREATED AT
+large-size   2019-09-13T20:39:16Z
+
+$ *oc get networkpolicy*
+NAME                                 POD-SELECTOR   AGE
+allow-from-same-namespace            <none>         68s
+allow-network-policy-group-ingress   <none>         68s
+
+$ *oc delete project test-project-policy*
+----
+
+Finally, log back into the web console as *andrew*.
+
+[subs=+quotes]
+----
+$ *oc whoami --show-console*
+----
+
+You'll notice that some projects that have been created that only he has access to. This is to emulate the separation of concerns between Cluster Administrators and Application Developers. We'll use these projects later when we set up our *Application GitOps*
 
 GitOps in Action
 ----------------
@@ -1038,8 +1190,17 @@ Note the increased values for resource limits for `cores` and `memory`.
 Application GitOps
 ------------------
 
-GitOps for applications follows a similar pattern as we have seen for platform administration.
-A couple key differences is dealing with application build and deployment and that application administrators usually do not have full cluster-admin access.
+_Infrastructure as Code_ plays an equally important role for application developers as for cluster administrators.
+The good news is that our GitOps workflow applies just as easily for applications as it does for clusters.
+In this section, we are going to walk through an entirely separate GitOps workflow for managing an application on OpenShift.
+We will use a very similar pattern as we have seen for platform administration.
+A couple key differences are that we are dealing with application build and deployment resources and that application administrators usually do not have full cluster-admin access.
+
+Until now, we have bee acting as the persona of *David* the cluster administrator. For this section, we are going to take on a new persona of *Andrew*, a PHP Developer on the *Portal App* team.
+
+As you go through this portion of the lab, you will learn the following.
+
+* *Our GitOps tooling naturally supports multitenancy.* By this we mean that we can have multiple GitOps workflows owned by different users within the same cluster, and they do not conflict or depend on each other.
 
 Creating an App GitOps Repository
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

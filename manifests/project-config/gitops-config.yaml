@@ -1,0 +1,15 @@
+---
+apiVersion: redhatcop.redhat.io/v1alpha1
+kind: NamespaceConfig
+metadata:
+  name: gitops
+  namespace: namespace-configuration-operator
+spec:
+  selector:
+    matchLabels:
+      flavor: gitops
+  resources:
+    - apiVersion: v1
+      kind: ServiceAccount
+      metadata:
+        name: gitops-runner
