@@ -978,7 +978,7 @@ $ **git commit -m "Add cluster autoscaler parameters"**
 [master 5c02182] Add cluster autoscaler parameters
  3 files changed, 9 insertions(+), 5 deletions(-)
  rename {manifests/clusterautoscaler.yaml => templates/clusterautoscaler.j2} (56%)
-$ **git push**
+$ **git push origin master**
 Username for \'https://github.com': **__GITHUB_ACCOUNT__**
 Password for \'https://__GITHUB_ACCOUNT__@github.com':
 Counting objects: 16, done.
