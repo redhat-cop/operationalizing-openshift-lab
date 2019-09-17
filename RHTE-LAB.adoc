@@ -237,7 +237,7 @@ Add files with changes to be included in next commit:
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
-$ *git add .applier/group_vars/seed-hosts/auth.yml .applier/ldap-ca.crt \
+$ *git add .applier/group_vars/seed-hosts/auth.yml ldap-ca.crt \
     requirements.yml templates/cluster-gitops.yaml*
 --------------------------------------------------------------------------------
 +
