@@ -241,7 +241,7 @@ Add files with changes to be included in next commit:
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
-$ *git add .applier/group_vars/seed-hosts/auth.yml .applier/ldap-ca.crt \
+$ *git add .applier/group_vars/seed-hosts/auth.yml ldap-ca.crt \
     requirements.yml templates/cluster-gitops.yaml*
 --------------------------------------------------------------------------------
 +
@@ -259,8 +259,8 @@ Push your commit to your GitHub repository, authenticating when prompted:
 [subs=+quotes]
 --------------------------------------------------------------------------------
 $ *git push origin master*
-Username for \'https://github.com': **__GITHUB_USER__**
-Password for \'https://__GITHUB_USER__@github.com':
+Username for \'https://github.com': **__GITHUB_ACCOUNT__**
+Password for \'https://__GITHUB_ACCOUNT__@github.com':
 Counting objects: 18, done.
 Delta compression using up to 2 threads.
 Compressing objects: 100% (9/9), done.
@@ -396,6 +396,7 @@ Switched to context "current".
 +
 NOTE: The configuration performed by this first job run reconfigures the openshift-machine-api, resulting in the worker nodes being replaced.
 It is possible that the node where the job ran will terminate before the logs can be retrieved.
+It may take up to 6 minutes for the cluster to create the replacement nodes.
 
 Exploring Our Newly Configured Cluster
 -------------------------------------
@@ -475,8 +476,8 @@ Now let's test the login capabilities. First we'll grab the cluster console URL:
 $ *oc whoami --show-console*
 https://console-openshift-console.apps.example.com
 --------------------------------------------------------------------------------
-
-Now test login with user "karla" or "andrew" using the same password as was used for LDAP bind.
++
+Now test login with user "karla", "david", or "andrew" using the same password as was used for LDAP bind.
 
 === MachineSets and AutoScalers
 
@@ -743,8 +744,8 @@ Push your commit to your GitHub repository, authenticating when prompted:
 [subs=+quotes]
 --------------------------------------------------------------------------------
 $ **git push origin master**
-Username for \'https://github.com': **__GITHUB_USER__**
-Password for \'https://__GITHUB_USER__@github.com':
+Username for \'https://github.com': **__GITHUB_ACCOUNT__**
+Password for \'https://__GITHUB_ACCOUNT__@github.com':
 Counting objects: 11, done.
 Delta compression using up to 2 threads.
 Compressing objects: 100% (5/5), done.
@@ -911,8 +912,8 @@ $ **git commit -m "Add schedule for gitops processing"**
  3 files changed, 8 insertions({plus}), 2 deletions(-)
  create mode 100644 .applier/group_vars/seed-hosts/gitops.yml
 $ **git push origin master**
-Username for 'https://github.com': **__GITHUB_USER__**
-Password for \'https://__GITHUB_USER__@github.com':
+Username for 'https://github.com': **__GITHUB_ACCOUNT__**
+Password for \'https://__GITHUB_ACCOUNT__@github.com':
 Counting objects: 16, done.
 Delta compression using up to 2 threads.
 Compressing objects: 100% (7/7), done.
@@ -1060,7 +1061,6 @@ EOF**
 [subs=+quotes]
 --------------------------------------------------------------------------------
 $ **cat >>.applier/group_vars/seed-hosts/openshift-machine-api.yml <<EOF
----
 cluster_autoscaler_cores_min: 16
 cluster_autoscaler_cores_max: 256
 cluster_autoscaler_memory_min: 8
@@ -1129,7 +1129,7 @@ $ **git commit -m "Add cluster autoscaler parameters"**
 [master 5c02182] Add cluster autoscaler parameters
  3 files changed, 9 insertions(+), 5 deletions(-)
  rename {manifests/clusterautoscaler.yaml => templates/clusterautoscaler.j2} (56%)
-$ **git push**
+$ **git push origin master**
 Username for \'https://github.com': **__GITHUB_ACCOUNT__**
 Password for \'https://__GITHUB_ACCOUNT__@github.com':
 Counting objects: 16, done.
@@ -1226,8 +1226,9 @@ Resolving deltas: 100% (1073/1073), done.
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
-$ **sed -r -i "s|https://github.com/redhat-gpte-devopsautomation/|https://github.com/${GITHUB_ACCOUNT}/|"
-   openshift/*/*.yml**
+$ **cd cakephp-ex**
+$ **sed -r -i "s|https://github.com/redhat-gpte-devopsautomation/|https://github.com/${GITHUB_ACCOUNT}/|" \
+   openshift/\*/*.yml**
 --------------------------------------------------------------------------------
 
 . Update repository references in `.applier/group_vars/seed-hosts/main.yml`:
@@ -1238,7 +1239,34 @@ $ **sed -r -i "s|https://raw.githubusercontent.com/redhat-gpte-devopsautomation/
    .applier/group_vars/seed-hosts/main.yml**
 --------------------------------------------------------------------------------
 
+. Add a NetworkPolicy definition to the database template:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ **cat >>openshift/multi-project-templates/cakephp-mysql-persistent.yml <<EOF
+- kind: NetworkPolicy
+  apiVersion: networking.k8s.io/v1
+  metadata:
+    name: allow-frontend-to-database
+    namespace: ${DATABASE_NAMESPACE}
+  spec:
+    podSelector:
+      matchLabels:
+        name: ${DATABASE_SERVICE_NAME}
+    ingress:
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            name: ${FRONTEND_NAMESPACE}
+      ports:
+      - protocol: TCP
+        port: 3306
+EOF**
+--------------------------------------------------------------------------------
+
 . Git add/commit/push
++
+Add all changes for commit. You may use `-p` as shown previously to review all changes.
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
@@ -1259,15 +1287,15 @@ Push changes to GitHub repository:
 [subs=+quotes]
 --------------------------------------------------------------------------------
 $ **git push origin master**
-Username for \'https://github.com': **__GITHUB_USER__**
-Password for \'https://__GITHUB_USER__@github.com':
+Username for \'https://github.com': **__GITHUB_ACCOUNT__**
+Password for \'https://__GITHUB_ACCOUNT__@github.com':
 Counting objects: 36, done.
 Delta compression using up to 2 threads.
 Compressing objects: 100% (18/18), done.
 Writing objects: 100% (19/19), 4.47 KiB | 0 bytes/s, done.
 Total 19 (delta 11), reused 0 (delta 0)
 remote: Resolving deltas: 100% (11/11), completed with 11 local objects.
-To https://github.com/__GITHUB_USER__/cakephp-ex.git
+To https://github.com/__GITHUB_ACCOUNT__/cakephp-ex.git
  + 1b9a1f6...713f8d6 master -> master (forced update)
 --------------------------------------------------------------------------------
 
@@ -1324,27 +1352,10 @@ Let's configure our GitOps workflow.
 [subs=+quotes]
 --------------------------------------------------------------------------------
 $ **oc process -f openshift/multi-project-templates/gitops.yml | oc apply -f -**
-namespace/cakephp-gitops created
-namespace/cakephp-build created
-namespace/cakephp-app-dev created
-namespace/cakephp-db-dev created
-namespace/cakephp-app-test created
-namespace/cakephp-db-test created
-namespace/cakephp-app-prod created
-namespace/cakephp-db-prod created
-serviceaccount/gitops-runner created
 gitopsconfig.eunomia.kohls.io/cakephp created
-rolebinding.rbac.authorization.k8s.io/gitops-runner-binding created
-rolebinding.rbac.authorization.k8s.io/gitops-runner-binding created
-rolebinding.rbac.authorization.k8s.io/gitops-runner-binding created
-rolebinding.rbac.authorization.k8s.io/gitops-runner-binding created
-rolebinding.rbac.authorization.k8s.io/gitops-runner-binding created
-rolebinding.rbac.authorization.k8s.io/gitops-runner-binding created
-rolebinding.rbac.authorization.k8s.io/gitops-runner-binding created
 --------------------------------------------------------------------------------
 +
-This has create a `cakephp-gitops` namespace as well as namespaces for dev, test, and prod environments for the application and database.
-Role-bindings have been created to give the GitOps service account access to manage the application namespaces and a GitOpsConfig has been created to automate further configuration through Eunomia.
+This has created a GitOpsConfig in the `cakephp-gitops` namespace for processing by Eunomia.
 
 . Eunomia should automatically respond to the creation of the GitOpsConfig by creating a GitOps job in the `cakephp-gitops` namespace:
 +
@@ -1358,7 +1369,7 @@ gitopsconfig-cakephp-pd3pu1   1/1           56s        71s
 Upon completion the GitOps resources and deployments will have been created.
 Now we need to show how to use GitOps with application pipelines.
 
-. Pipeline verification:
+. Verify application build and deployment:
 +
 Verify that the `openshift/multi-project-templates/cakephp-build.yml` template has created an OpenShift build config in the `cakephp-build` namespace:
 +
@@ -1545,8 +1556,8 @@ rolebinding.rbac.authorization.k8s.io/system:image-pullers:cakephp-sbx created
 [subs=+quotes]
 --------------------------------------------------------------------------------
 $ **oc get build**
-NAME       TYPE    FROM  STATUS    STARTED             DURATION
-cakephp-1  Source  Git   Complete  About a minute ago  1m47s
+NAME       TYPE    FROM         STATUS    STARTED        DURATION
+cakephp-1  Source  Git@62a091d  Complete  2 minutes ago  1m51s
 --------------------------------------------------------------------------------
 
 . Verify that the application and database have deployed:
@@ -1567,6 +1578,8 @@ $ **oc get route**
 NAME      HOST/PORT                                                            PATH   SERVICES   PORT    TERMINATION   WILDCARD
 cakephp   cakephp-cakephp-sbx.apps.cluster-1b5b.1b5b.sandbox1485.opentlc.com          cakephp    <all>                 None
 --------------------------------------------------------------------------------
++
+NOTE: It may take a few minutes for the database to initialize and the application to start for the first time.
 
 . Add some missing documentation to the application home page template:
 +
@@ -1581,7 +1594,7 @@ A `sed` command to make this edit is:
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
-$ **sed -i '/# Within your project directory/i # Test build from local source before commit\n$ oc start-build cakephp-example --from-dir=.\n' \
+$ **sed -i \'/# Within your project directory/i # Test build from local source before commit\n$ oc start-build cakephp-example --from-dir=.\n' \
   ./src/Template/Pages/home.ctp**
 --------------------------------------------------------------------------------
 
@@ -1598,6 +1611,16 @@ build.build.openshift.io/cakephp-2 started
 
 . Wait for the build to finish then observe that a new deployment of the deployment config in your sandbox is triggered automatically.
 When the build finishes, recheck the webpage and confirm that the new content appears.
++
+You can follow the build logs with:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ **oc logs -f build/cakephp-2**
+--------------------------------------------------------------------------------
++
+After the build completes wait for the new deployment to trigger and complete then check the web page content by refreshing your browser.
+You should see the instruction regarding "Test build from local source before commit" that you added.
 
 . Now that you have tested your new code running with an OpenShift build in a container you are ready to commit and push:
 +
@@ -1627,7 +1650,7 @@ And commit to git:
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
-$ **git commit -m 'Add home page content'**
+$ **git commit -m \'Add home page content'**
 [master ec4f9e6] Add home page content
  4 files changed, 32 insertions(+)
 --------------------------------------------------------------------------------
@@ -1648,7 +1671,7 @@ Update the `build_version` variable in `.applier/group_vars/seed-hosts/vars.yml`
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
-$ **sed -i 's|build_version:.*|build_version: v1.0-2|' .applier/group_vars/seed-hosts/vars.yml**
+$ **sed -i \'s|build_version:.*|build_version: v1.0-2|' .applier/group_vars/seed-hosts/vars.yml**
 --------------------------------------------------------------------------------
 +
 Add this change and commit to git:
@@ -1668,7 +1691,7 @@ index 8f2e2ad..1c0757d 100644
  prod_version: v1.0-1
 Stage this hunk [y,n,q,a,d,/,e,?]? **y**
 
-$ **git commit -m 'Update build_version to v1.0-2'**
+$ **git commit -m \'Update build_version to v1.0-2'**
 [master 87304ca] Update build_version to v1.0-2
  1 file changed, 1 insertion(+), 1 deletion(-)
 --------------------------------------------------------------------------------
@@ -1685,15 +1708,15 @@ Push commits and the new tag to GitHub:
 [subs=+quotes]
 --------------------------------------------------------------------------------
 $ **git push origin master v1.0-2**
-Username for \'https://github.com': **__GITHUB_USER__**
-Password for \'https://__GITHUB_USER__@github.com':
+Username for \'https://github.com': **__GITHUB_ACCOUNT__**
+Password for \'https://__GITHUB_ACCOUNT__@github.com':
 Counting objects: 31, done.
 Delta compression using up to 2 threads.
 Compressing objects: 100% (16/16), done.
 Writing objects: 100% (17/17), 1.68 KiB | 0 bytes/s, done.
 Total 17 (delta 9), reused 0 (delta 0)
 remote: Resolving deltas: 100% (9/9), completed with 8 local objects.
-To https://github.com/__GITHUB_USER__/cakephp-ex.git
+To https://github.com/__GITHUB_ACCOUNT__/cakephp-ex.git
    270ee9b..87304ca  master -> master
  * [new tag]         v1.0-2 -> v1.0-2
 --------------------------------------------------------------------------------
@@ -1715,7 +1738,7 @@ cakephp-1   Source   Git@e580286   Complete   12 hours ago     2m1s
 cakephp-2   Source   Git@v1.0-2    Running    10 seconds ago
 --------------------------------------------------------------------------------
 +
-Once the build completes, confirm that a new image is available:
+Once the build completes, confirm that a new image is available with tag `v1.0-2`:
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
@@ -1730,7 +1753,7 @@ Update the `dev_version` variable in `.applier/group_vars/seed-hosts/vars.yml`:
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
-$ **sed -i 's|dev_version:.*|dev_version: v1.0-2|' .applier/group_vars/seed-hosts/vars.yml**
+$ **sed -i \'s|dev_version:.*|dev_version: v1.0-2|' .applier/group_vars/seed-hosts/vars.yml**
 --------------------------------------------------------------------------------
 +
 [subs=+quotes]
@@ -1749,19 +1772,19 @@ index 1c0757d..108b70c 100644
  prod_version: v1.0-1
 Stage this hunk [y,n,q,a,d,/,e,?]? y
 
-$ **git commit -m 'Release v1.0-2 to dev'**
+$ **git commit -m \'Release v1.0-2 to dev'**
 [master 6fbc6b5] Release v1.0-2 to dev
  1 file changed, 1 insertion(+), 1 deletion(-)
 $ **git push origin master**
-Username for \'https://github.com': **__GITHUB_USER__**
-Password for \'https://__GITHUB_USER__@github.com':
+Username for \'https://github.com': **__GITHUB_ACCOUNT__**
+Password for \'https://__GITHUB_ACCOUNT__@github.com':
 Counting objects: 11, done.
 Delta compression using up to 2 threads.
 Compressing objects: 100% (5/5), done.
 Writing objects: 100% (6/6), 528 bytes | 0 bytes/s, done.
 Total 6 (delta 1), reused 0 (delta 0)
 remote: Resolving deltas: 100% (1/1), completed with 1 local object.
-To https://github.com/__GITHUB_USER__/cakephp-ex.git
+To https://github.com/__GITHUB_ACCOUNT__/cakephp-ex.git
    1391022..6fbc6b5  master -> master
 --------------------------------------------------------------------------------
 
@@ -1772,15 +1795,19 @@ To https://github.com/__GITHUB_USER__/cakephp-ex.git
 $ **oc annotate --overwrite -n cakephp-gitops gitopsconfig cakephp trigger-update=$(date +"%FT%TZ")**
 --------------------------------------------------------------------------------
 +
-Wait for dev deployment
+Wait for job completion and deployment to `cakephp-app-dev`.
++
+When complete you should see a new deployment has run:
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
-$ **oc get pod -n cakephp-db-dev**
-NAME             READY   STATUS      RESTARTS   AGE
-mysql-1-deploy   0/1     Completed   0          6h56m
-mysql-2-deploy   0/1     Completed   0          5m15s
-mysql-2-xvmj2    1/1     Running     0          4m58s
+$ **oc get pod -n cakephp-app-dev**
+NAME                 READY   STATUS      RESTARTS   AGE
+cakephp-1-deploy     0/1     Completed   0          25m
+cakephp-1-hook-pre   0/1     Completed   0          25m
+cakephp-2-deploy     0/1     Completed   0          77s
+cakephp-2-gf2bs      1/1     Running     0          54s
+cakephp-2-hook-pre   0/1     Completed   0          69s
 --------------------------------------------------------------------------------
 
 . Get the route for the application dev environment then check in your web browser for new content.
@@ -1798,7 +1825,7 @@ Set the `dev_version` variable back to `v1.0-1`:
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
-$ **sed -i 's|dev_version:.*|dev_version: v1.0-1|' .applier/group_vars/seed-hosts/vars.yml**
+$ **sed -i \'s|dev_version:.*|dev_version: v1.0-1|' .applier/group_vars/seed-hosts/vars.yml**
 --------------------------------------------------------------------------------
 +
 With this simple change we reconfigure not just to run with the previous image but also with the previous templated configuration.
@@ -1820,12 +1847,12 @@ index 108b70c..1c0757d 100644
  prod_version: v1.0-1
 Stage this hunk [y,n,q,a,d,/,e,?]? y
 
-$ **git commit -m 'Rollback dev to v1.0-1'**
+$ **git commit -m \'Rollback dev to v1.0-1'**
 [master 6a88c09] Rollback dev to v1.0-1
  1 file changed, 1 insertion(+), 1 deletion(-)
 $ **git push origin master**
-Username for \'https://github.com': **__GITHUB_USER__**
-Password for \'https://__GITHUB_USER__@github.com':
+Username for \'https://github.com': **__GITHUB_ACCOUNT__**
+Password for \'https://__GITHUB_ACCOUNT__@github.com':
 Counting objects: 11, done.
 Delta compression using up to 2 threads.
 Compressing objects: 100% (5/5), done.
