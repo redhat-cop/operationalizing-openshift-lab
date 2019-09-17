@@ -1291,6 +1291,33 @@ Configuring App GitOps with Eunomia
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The CakePHP example repository you are using is already configured for use with `openshift-applier`, including the `.applier` directory, `requirements.yml`, and GitOps OpenShift template.
+We will now apply our Application GitOps configuration to the cluster. But first, we need to take on our new persona, *Andrew* the PHP Developer.
+
+[subs=+quota]
+----
+$ oc whoami --show-server
+https://api.cluster-<guid>.<guid>.sandbox1485.opentlc.com:6443
+
+$ oc login -u andrew https://api.cluster-<guid>.<guid>.sandbox1485.opentlc.com:6443
+Username: andrew
+Password:
+Login successful.
+
+You have access to the following projects and can switch between them with 'oc project <projectname>':
+
+  * cakephp-app-dev
+    cakephp-app-prod
+    cakephp-app-test
+    cakephp-build
+    cakephp-db-dev
+    cakephp-db-prod
+    cakephp-db-test
+
+Using project "cakephp-app-dev".
+----
+
+Remember those projects we saw earlier in the lab? Now that we have taken on the *Andrew* persona, we are going to deploy our Cake PHP app to these projects.
+Let's configure our GitOps workflow.
 
 . Configure application GitOps for the example CakePHP application by processing the `gitops.yml` template found in the `openshift/multi-project-templates/` directory.
 +
