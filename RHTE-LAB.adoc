@@ -392,6 +392,7 @@ Switched to context "current".
 +
 NOTE: The configuration performed by this first job run reconfigures the openshift-machine-api, resulting in the worker nodes being replaced.
 It is possible that the node where the job ran will terminate before the logs can be retrieved.
+It may take up to 6 minutes for the cluster to create the replacement nodes.
 
 . Confirm Eunomia has reconfigured the cluster by testing login.
 +
