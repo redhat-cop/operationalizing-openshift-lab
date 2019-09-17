@@ -397,6 +397,7 @@ Switched to context "current".
 NOTE: The configuration performed by this first job run reconfigures the openshift-machine-api, resulting in the worker nodes being replaced.
 It is possible that the node where the job ran will terminate before the logs can be retrieved.
 It may take up to 6 minutes for the cluster to create the replacement nodes.
+You may watch for the new nodes to become available with `oc get nodes -w`.
 
 Exploring Our Newly Configured Cluster
 -------------------------------------
@@ -408,10 +409,10 @@ For this part of the Lab, we are going to take on the persona of *David*, a clus
 [subs=+quotes]
 ----
 $ *oc whoami --show-server*
-https://api.cluster-*<guid>*.*<guid>*.sandbox1485.opentlc.com:6443
+https://api.cluster-*<guid>*.*<guid>*.sandbox<nnn>.opentlc.com:6443
 
-$ *oc login -u david https://api.cluster-<guid>.<guid>.sandbox1485.opentlc.com:6443*
-Logged into "https://api.cluster-<guid>.<guid>.sandbox1485.opentlc.com:6443" as "david" using existing credentials.
+$ *oc login -u david https://api.cluster-<guid>.<guid>.sandbox<nnn>.opentlc.com:6443*
+Logged into "https://api.cluster-<guid>.<guid>.sandbox<nnn>.opentlc.com:6443" as "david" using existing credentials.
 
 You have access to 59 projects, the list has been suppressed. You can list all projects with 'oc projects'
 
@@ -1324,9 +1325,9 @@ We will now apply our Application GitOps configuration to the cluster. But first
 [subs=+quota]
 ----
 $ oc whoami --show-server
-https://api.cluster-<guid>.<guid>.sandbox1485.opentlc.com:6443
+https://api.cluster-<guid>.<guid>.sandbox<nnn>.opentlc.com:6443
 
-$ oc login -u andrew https://api.cluster-<guid>.<guid>.sandbox1485.opentlc.com:6443
+$ oc login -u andrew https://api.cluster-<guid>.<guid>.sandbox<nnn>.opentlc.com:6443
 Username: andrew
 Password:
 Login successful.
