@@ -113,6 +113,11 @@ openshift_cluster_content:
     file: "{{ inventory_dir }}/../manifests/project-config/"
     tags:
     - project-config
+  - name: Projects for Onboarded Applications
+    file: "{{ inventory_dir }}/../manifests/apps/"
+    tags:
+    - project-config
+
 
 
 # Variables set dynamically by set_fact in discover role

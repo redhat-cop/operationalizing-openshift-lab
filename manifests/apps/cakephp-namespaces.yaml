@@ -1,0 +1,102 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    openshift.io/requester: andrew
+  labels:
+    app: cakephp
+    flavor: gitops
+    multitenant: "true"
+    size: small
+  name: cakephp-gitops
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    openshift.io/requester: andrew
+  labels:
+    app: cakephp
+    flavor: default
+    multitenant: "true"
+    size: large
+  name: cakephp-build
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    openshift.io/requester: andrew
+  labels:
+    app: cakephp
+    env: dev
+    flavor: default
+    multitenant: "true"
+    size: large
+  name: cakephp-app-dev
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    openshift.io/requester: andrew
+  labels:
+    app: cakephp
+    env: test
+    flavor: default
+    multitenant: "true"
+    size: large
+  name: cakephp-app-test
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    openshift.io/requester: andrew
+  labels:
+    app: cakephp
+    env: prod
+    flavor: default
+    multitenant: "true"
+    size: large
+  name: cakephp-app-prod
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    openshift.io/requester: andrew
+  labels:
+    app: cakephp
+    env: dev
+    flavor: default
+    multitenant: "true"
+    size: large
+  name: cakephp-db-dev
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    openshift.io/requester: andrew
+  labels:
+    app: cakephp
+    env: test
+    flavor: default
+    multitenant: "true"
+    size: large
+  name: cakephp-db-test
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    openshift.io/requester: andrew
+  labels:
+    app: cakephp
+    env: prod
+    flavor: default
+    multitenant: "true"
+    size: large
+  name: cakephp-db-prod
