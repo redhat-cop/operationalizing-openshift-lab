@@ -30,7 +30,7 @@ objects:
     apiVersion: storage.k8s.io/v1
     metadata:
       annotations:
-        storageclass.beta.kubernetes.io/is-default-class: "true"
+        storageclass.beta.kubernetes.io/is-default-class: "false"
       name: slow-block
     parameters:
       encrypted: "${ENCRYPT_STORAGE}"
