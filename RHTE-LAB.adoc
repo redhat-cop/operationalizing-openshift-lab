@@ -411,7 +411,7 @@ For this part of the Lab, we are going to take on the persona of *David*, a clus
 $ *oc whoami --show-server*
 https://api.cluster-*<guid>*.*<guid>*.sandbox<nnn>.opentlc.com:6443
 
-$ *oc login -u david https://api.cluster-<guid>.<guid>.sandbox<nnn>.opentlc.com:6443*
+$ *oc login -u david $(oc whoami --show-server)*
 Logged into "https://api.cluster-<guid>.<guid>.sandbox<nnn>.opentlc.com:6443" as "david" using existing credentials.
 
 You have access to 59 projects, the list has been suppressed. You can list all projects with 'oc projects'
@@ -1327,7 +1327,7 @@ We will now apply our Application GitOps configuration to the cluster. But first
 $ oc whoami --show-server
 https://api.cluster-<guid>.<guid>.sandbox<nnn>.opentlc.com:6443
 
-$ oc login -u andrew https://api.cluster-<guid>.<guid>.sandbox<nnn>.opentlc.com:6443
+$ oc login -u andrew $(oc whoami --show-server)
 Username: andrew
 Password:
 Login successful.
