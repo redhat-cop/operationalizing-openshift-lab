@@ -1,7 +1,7 @@
 Operationalizing OpenShift Lab
 ==============================
 
-:toc-title:
+:toc:
 :toc-placement!:
 
 image::media/ops-workflow.png[]
@@ -1779,6 +1779,8 @@ Note the increased values for resource limits for `cores` and `memory`.
 
 Application GitOps
 ------------------
+
+image::media/app-workflow.png[]
 
 _Infrastructure as Code_ plays an equally important role for application developers as for cluster administrators.
 The good news is that our GitOps workflow applies just as easily for applications as it does for clusters.
