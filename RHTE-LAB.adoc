@@ -4,35 +4,494 @@ Operationalizing OpenShift Lab
 :toc-title:
 toc::[]
 
-
-In this lab we are going to develop an iterative and declarative approach to taking a new OpenShift Cluster from vanilla to operationalized.
-This repo should act as a resource for cluster administrators to begin the process of defining clusters as code.
-
 In OpenShift 4, every cluster starts out the same way -- a bootstrapped control plane with master, and worker nodes.
 However, in order for this cluster to provide value to an organization, it needs further configuration.
-Using this repository as a starting point we are going to establish an automated strategy for managing configuration of an operationalized cluster, including things like:
 
-* Enabling Cluster Autoscaling
-* Configuring authentication and authorization
-* Configuring namespace creation
-* Setting up quotas & limits for applications
-* Applying automated certificate management for applications
-* Deploying initial workloads
-* Deploying custom dashboards and setting up alerts
+In this lab, we are going to develop a strategy for making these configurations and maintaining them over time.
+We are going to employ the concepts of
+link:https://openpracticelibrary.com/practice/everything-as-code/[Everything as Code] and
+link:https://thenewstack.io/what-is-gitops-and-why-it-might-be-the-next-big-thing-for-devops/[GitOps]
+to create self-managing OpenShift clusters, where the day 2 operations are done through
+link:https://www.weave.works/blog/gitops-operations-by-pull-request[Pull Requests].
 
 Note that the purpose of this lab is not to teach how each of the components works individually, but to show how one can employ a common automation strategy to a myriad of different configurations.
 
 Let's get started...
 
+Provisioning your Lab Environment
+---------------------------------
+
+For Red Hat Tech Exchange, the GUID grabber link to get your lab environment is:
+
+https://www.opentlc.com/gg/gg.cgi?profile=generic_rhte
+
+This lab code is "A2031", the activation code will be provided during the event.
+
+If you are running through the lab on your own then you may provision an "OpenShift 4 Configuration" lab environment from https://labs.opentlc.com/.
+
 :numbered:
 
-Setting up a GitOps Workflow
------------------------------
+GitOps Workflow for a Simple Use Case
+-------------------------------------
 
 _GitOps_ is a form of Infrastructure as Code practice where all of the configurations that define a system are managed in a git repository, and automatically and idempotently applied to that system each time commits are made to the repository.
 For this lab, we are going to enable such a workflow using an Operator called link:https://github.com/KohlsTechnology/eunomia[Eunomia] and link:https://github.com/redhat-cop/openshift-applier[OpenShift Applier], an automation framework for OpenShift.
 Eunomia provides a workflow for watching git repos, triggering actions when new commits are detected.
 The action, in this case, will be a link:https://kubernetes.io/docs/tasks/job/[Kubernetes Job] that executes Applier.
+
+You will begin by configuring a simple and common task for OpenShift clusters, exposing the cluster's integrated image registry.
+First you will configure a registry route manually and then build up to GitOps step by step.
+
+Applying a Configuration
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+. Check the initial state of the container image registry.
++
+In your newly installed OpenShift cluster you will find the container image registry running in the `openshift-image-registry` project namespace.
+There is an `image-registry` service, which is used for image access within the cluster, but there is no route for external access.
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ **oc get service -n openshift-image-registry**
+NAME             TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)    AGE
+image-registry   ClusterIP   172.30.151.126   <none>        5000/TCP   37m
+$ **oc get route -n openshift-image-registry**
+No resources found.
+--------------------------------------------------------------------------------
+
+. Use the `oc expose` command to create a route for the service:
++
+It is a common practice to expose the OpenShift container image registry outside of the cluster so that CI/CD pipelines can
+link:http://v1.uncontained.io/playbooks/continuous_delivery/image_promotion.html[move images between clusters as a form of Promotion].
+We can do this manually using the oc expose command.
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ **oc expose service -n openshift-image-registry image-registry**
+route.route.openshift.io/image-registry exposed
+--------------------------------------------------------------------------------
+
+. Confirm the route has been created:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ **oc get route -n openshift-image-registry**
+NAME            HOST/PORT                                                                          PATH  SERVICES        PORT      TERMINATION  WILDCARD
+image-registry  image-registry-openshift-image-registry.apps.cluster-d8f5.sandbox1349.opentlc.com        image-registry  5000-tcp               None
+--------------------------------------------------------------------------------
+
+. Attempt to reconfigure the route.
++
+The hostname automatically assigned composed of the service name and the namespace.
+A friendlier name would be to change the leading `image-registry-openshift-image-registry` to just `image-registry`.
++
+Attempt to adjust the route with `oc expose`:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ **oc expose service -n openshift-image-registry image-registry \
+  --hostname=image-registry.apps.cluster-d8f5.sandbox1349.opentlc.com**
+Error from server (AlreadyExists): routes.route.openshift.io "image-registry" already exists
+--------------------------------------------------------------------------------
++
+No luck, the `oc expose` command is not idempotent.
+Many of the subcommands provided by `oc` are helpful for getting things started, but are not suited for maintaining your configuration later.
+If we want to do it right we will need a workflow made from declarative configuration, not a series of commands.
+
+. On your bastion, create a directory for your GitOps lab files in your home directory:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ **cd $HOME**
+$ **mkdir openshift-gitops-lab**
+$ **cd openshift-gitops-lab/**
+--------------------------------------------------------------------------------
+
+. Dump the route definition created by `oc expose` to a YAML file called `image-registry-route.yaml`:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ **oc get route -n openshift-image-registry -o yaml image-registry >image-registry-route.yaml**
+--------------------------------------------------------------------------------
++
+Then edit `image-registry-route.yaml`, removing everything except the bits you actually want to manage.
+The result should look something like this, but with your own cluster domain for the host:
++
+--------------------------------------------------------------------------------
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: image-registry
+  namespace: openshift-image-registry
+spec:
+  host: image-registry-openshift-image-registry.apps.cluster-d8f5.sandbox1349.opentlc.com
+  port:
+    targetPort: 5000-tcp
+  to:
+    kind: Service
+    name: image-registry
+--------------------------------------------------------------------------------
+
+. Apply your configuration to the cluster:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ **oc apply -f image-registry-route.yaml**
+Warning: oc apply should be used on resource created by either oc create --save-config or oc apply
+route.route.openshift.io/image-registry configured
+--------------------------------------------------------------------------------
++
+NOTE: The first run of `oc apply` will issue a warning and add an annotation to the resource that is used later to track changes.
+
+. Now let's test that you can make our update to the short name.
++
+Using a text editior, edit `image-registry-route.yaml` and shorten the hostname.
++
+A `sed` command which makes this edit is:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ **sed -i \'s/image-registry-openshift-image-registry/image-registry/' image-registry-route.yaml**
+--------------------------------------------------------------------------------
++
+Now use `oc apply` to reconfigure the route:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ **oc apply -f image-registry-route.yaml**
+route.route.openshift.io/image-registry configured
+--------------------------------------------------------------------------------
++
+And confirm that the route hostname has been updated:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ **oc get route -n openshift-image-registry**
+NAME             HOST/PORT                                                  PATH   SERVICES         PORT       TERMINATION   WILDCARD
+image-registry   image-registry.apps.cluster-d8f5.sandbox1349.opentlc.com          image-registry   5000-tcp                 None
+--------------------------------------------------------------------------------
+
+Ansible Automation
+~~~~~~~~~~~~~~~~~~
+
+In this next section you will have a look at how to automate an `oc apply` based workflow with Ansible.
+The configuration we put together so far is a bit brittle.
+For example, if this were managing real clusters you would want to dynamically determin the application domain for cluster ingress.
+Let's explore how that might look:
+
+. Create a `templates` directory and move your static route definition to have a `.j2` file extension, indicating Jinja2 template content:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ **mkdir templates**
+$ **mv image-registry-route.yaml templates/image-registry-route.j2**
+--------------------------------------------------------------------------------
+
+. Update the template content to use the variable `openshift_ingress_default_subdomain`:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ **sed -i \'s/^  host: .*/  host: image-registry.{{ openshift_ingress_default_subdomain }}/' \
+   templates/image-registry-route.j2**
+$ **cat templates/image-registry-route.j2**
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: image-registry
+  namespace: openshift-image-registry
+spec:
+  host: image-registry.{{ openshift_ingress_default_subdomain }}
+  port:
+    targetPort: 5000-tcp
+  to:
+    kind: Service
+    name: image-registry
+--------------------------------------------------------------------------------
+
+. Note that the `ingresscontroller` resource in the `openshift-ingress-operator` namespace has the cluster's domain:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ **oc get ingresscontroller -n openshift-ingress-operator default \
+  -o custom-columns=DOMAIN:.status.domain**
+DOMAIN
+apps.cluster-742f.sandbox499.opentlc.com
+--------------------------------------------------------------------------------
+
+. Write the following simple Ansible role named `discover` to fetch the IngressController definition from the cluster and save the domain to the `openshift_ingress_default_subdomain` fact.
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ **mkdir -p roles/discover/tasks**
+$ **cat >roles/discover/tasks/main.yaml <<EOF
+- name: Get default ingress controller
+  k8s_facts:
+    api_version:  operator.openshift.io/v1
+    kind: IngressController
+    name: default
+    namespace: openshift-ingress-operator
+  register: r_default_ingress_controller
+
+- name: Set discovered facts
+  set_fact:
+    openshift_ingress_default_subdomain: >
+      {{ r_default_ingress_controller.resources[0].status.domain }}
+EOF**
+--------------------------------------------------------------------------------
+
+. Write a simple Ansible playbook to run the your `discover` role and then `oc apply` the resource definition from the template source:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ **cat >playbook.yaml <<EOF
+- hosts: localhost
+  roles:
+  - discover
+  tasks:
+  - name: Apply image-registry route
+    command: oc apply -f -
+    args:
+      stdin: "{{ lookup(\'template', \'image-registry-route.j2') }}"
+EOF**
+--------------------------------------------------------------------------------
++
+But wait, you may say, "Why use `oc apply` when there is the `k8s` Ansible module?"
+Well, `k8s` is great, and we probably will use it in the future, but right now it is missing one key feature, removing things.
+The `oc apply` command will set an annotation, `kubectl.kubernetes.io/last-applied-configuration`, which records the last change made to the resource.
+This allows `oc apply` to detect when a field should be removed because it was included in the last configuration but absent from the next.
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ **ansible-playbook playbook.yaml**
+ [WARNING]: provided hosts list is empty, only localhost is available. Note that the implicit localhost does not match 'all'
+
+
+PLAY [localhost]
+
+TASK [Gathering Facts]
+ok: [localhost]
+
+TASK [discover : Get default ingress controller]
+ok: [localhost]
+
+TASK [discover : Set discovered facts]
+ok: [localhost]
+
+TASK [Apply image-registry route]
+changed: [localhost]
+
+PLAY RECAP
+localhost                  : ok=4    changed=1    unreachable=0    failed=0
+
+--------------------------------------------------------------------------------
++
+And that's it?
+Well, this is the core principle, but to continue in this way will be reinventing the wheel.
+The Red Hat containers community of practice has developed the Ansible role, `openshift-applier`.
+The core of applier is just running `oc apply` like we have shown, but provides a standard approach and adds template processing and a whole lot more.
+
+Enter `openshift-applier`
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+In these next steps you will organize what we have done so far into a simple example using `openshift-applier`.
+You also begin your `git` journey.
+
+. Create a new public GitHub repository:
++
+https://github.com/new
++
+The instructions below assume that you name your repository "openshift-gitops-lab".
+Make the repository public and do not initialize the repository.
+
+. Configure your git client environment.
++
+Before you start using git it is helpful to configure your git environment.
+Set your `user.name`, `user.email`, and `push.default` settings, substituting
+your name and email address in the following commands:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ **git config --global user.name "Your Name"**
+$ **git config --global user.email you@example.com**
+$ **git config --global push.default simple**
+--------------------------------------------------------------------------------
++
+Set a `GITHUB_ACCOUNT` variable with the name of your GitHub account.
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ **GITHUB_ACCOUNT=__YOUR_GITHUB_ACCOUNT__**
+--------------------------------------------------------------------------------
+
+. Create a `requirements.yml` configuration.
++
+The OpenShift applier dynamically fetch role dependencies with `ansible-galaxy` based on the Ansible requirements definition.
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ **cat >requirements.yml <<EOF
+---
+- src: https://github.com/redhat-cop/openshift-applier
+  version: master
+
+# The git repository for this project
+- src: https://github.com/${GITHUB_ACCOUNT}/openshift-gitops-lab.git
+  name: self
+  version: master
+EOF**
+--------------------------------------------------------------------------------
++
+The above should work if you named your repository "openshift-gitops-lab".
+If you used something different, your can copy your source URL from GitHub by using the "Clone or download" button.
+
+. Create a YAML vars file for the Ansible host group, `seed-hosts` with a definition of a dictionary `openshift_cluster_content`.
++
+The `openshift_cluster_content` dictionary is used by `openshift-applier` as a main switch-board defining what to configure in the cluster and in what order.
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ **mkdir -p .applier/group_vars/seed-hosts**
+$ **cat >.applier/group_vars/seed-hosts/main.yml <<EOF
+---
+openshift_cluster_content:
+- galaxy_requirements: "{{ inventory_dir }}/../requirements.yml"
+- object: OpenShift Image Registry Configuration
+  pre_steps:
+  - role: self/roles/discover
+  content:
+  - name: Image Registry Route
+    file: "{{ inventory_dir }}/../templates/image-registry-route.j2"
+    tags:
+    - image-registry
+EOF**
+--------------------------------------------------------------------------------
+
+. Create an Ansible inventory which configures localhost as a member of the `seed-hosts` group:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ **cat >.applier/hosts <<EOF
+[seed-hosts]
+localhost ansible_connection=local
+EOF**
+--------------------------------------------------------------------------------
+
+. Create a `meta/main.yml`
++
+No real content here, but `openshift-applier` requires this file to exist as part of a sanity check it uses when pulling dependencies.
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ **mkdir meta**
+$ **cat >meta/main.yml <<EOF
+---
+galaxy_info:
+EOF**
+--------------------------------------------------------------------------------
+
+. Create a `README.md`
++
+Because every repository should have documentation.
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ **echo "# OpenShift GitOps Lab" >> README.md**
+--------------------------------------------------------------------------------
+
+. Commit all of your code and push to your GitHub repository
++
+First, initialize your directory for `git`:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ **git init**
+Initialized empty Git repository in /home/lab-user/openshift-gitops-lab/.git/
+--------------------------------------------------------------------------------
++
+Add all required files for commit:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ **git add README.md requirements.yml .applier/ meta roles/ templates/**
+--------------------------------------------------------------------------------
++
+Commit to your local repository:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ **git commit -m "Initial commit"**
+[master 4b2e3e0] Initial commit
+ 7 files changed, 47 insertions(+)
+ create mode 100644 .applier/group_vars/seed-hosts/main.yml
+ create mode 100644 .applier/hosts
+ create mode 100644 README.md
+ create mode 100644 meta/main.yml
+ create mode 100644 requirements.yml
+ create mode 100644 roles/discover/tasks/main.yaml
+ create mode 100644 templates/image-registry-route.j2
+--------------------------------------------------------------------------------
++
+Add a remote to connect your local repository to your GitHub repository:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ **git remote add origin https://github.com/${GITHUB_ACCOUNT}/openshift-gitops-lab.git**
+--------------------------------------------------------------------------------
++
+And finally push to GitHub:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ **git push --set-upstream origin master**
+Username for \'https://github.com': **__GITHUB_ACCOUNT__**
+Password for \'https://__GITHUB_ACCOUNT__@github.com':
+Counting objects: 17, done.
+Delta compression using up to 2 threads.
+Compressing objects: 100% (9/9), done.
+Writing objects: 100% (17/17), 1.57 KiB | 0 bytes/s, done.
+Total 17 (delta 0), reused 0 (delta 0)
+To https://github.com/__GITHUB_ACCOUNT__/openshift-gitops-lab.git
+ * [new branch]      master -> master
+Branch master set up to track remote branch master from origin.
+--------------------------------------------------------------------------------
+
+. Pull down a local copy of `openshift-applier` and test your `requirements.yml`:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ **ansible-galaxy install -r requirements.yml -p galaxy**
+- extracting openshift-applier to /home/lab-user/openshift-gitops-lab/galaxy/openshift-applier
+- openshift-applier (master) was installed successfully
+- extracting self to /home/lab-user/openshift-gitops-lab/galaxy/self
+- self (master) was installed successfully
+--------------------------------------------------------------------------------
++
+NOTE: This step creates a `galaxy` subdirectory within your git repository.
+You should create a `.gitignore` configuration to exclude these files from later `git` activity.
+(https://git-scm.com/docs/gitignore)
+
+. Run `openshift-applier` using the `openshift-cluster-seed.yml` playbook.
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ **ansible-playbook -i .applier/ galaxy/openshift-applier/playbooks/openshift-cluster-seed.yml**
+PLAY [seed-hosts[0]]
+
+... OUTPUT OMITTED ...
+
+RUNNING HANDLER [openshift-applier : Clean up temporary dependency dir]
+changed: [localhost] => (item=/tmp/ansible.dO3wGX/)
+
+RUNNING HANDLER [openshift-applier : Clean up temporary Jinja directory]
+changed: [localhost] => (item=/tmp/ansible.aXO00w)
+
+PLAY RECAP
+localhost                  : ok=36   changed=9    unreachable=0    failed=0
+--------------------------------------------------------------------------------
++
+And now you're working with the OpenShift applier and ready to start contributing to the Red Hat containers community of practice!
++
+Let's get on to GitOps now!
 
 Install Eunomia
 ~~~~~~~~~~~~~~
@@ -125,34 +584,167 @@ $ **oc logs -n eunomia-operator $(oc get pod -n eunomia-operator -o name)**
 +
 Eunomia is now running, but does not yet have any configuration for GitOps processing.
 
-Create GitOps Repository
-~~~~~~~~~~~~~~~~~~~~~~~
+Running Applier with Eunomia
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Now, we can set up eunomia to monitor a repo of configs, which in turn will apply configs to set up our cluster.
-Eunomia provides a custom resource kind called a `GitOpsConfig` to set up a monitor on a repository.
+Now, you can set up eunomia to leverage your `openshift-gitops-lab` repository to run `openshift-applier` for you.
+In this section of the lab you will setup the GitOps configuration manually.
+Later in the lab you will see how you can use `openshift-applier` to automatically configure or reconfigure the GitOps configuration.
+
+. Delete the route for the image-registry so that you can confirm that the Eunomia successfully reconfigures it:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ **oc delete route -n openshift-image-registry image-registry**
+route.route.openshift.io "image-registry" deleted
+--------------------------------------------------------------------------------
+
+. Configure Eunomia to configure your cluster with your `openshift-gitops-lab` repository:
++
+Create the project namespace, `cluster-config`, for managing your GitOps cluster configuration:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ **oc new-project cluster-config**
+Now using project "cluster-config" on server "https://api.cluster-742f.sandbox499.opentlc.com:6443".
+
+You can add applications to this project with the 'new-app' command. For example, try:
+
+    oc new-app django-psql-example
+
+to build a new example application in Python. Or use kubectl to deploy a simple Kubernetes application:
+
+    kubectl create deployment hello-node --image=gcr.io/hello-minikube-zero-install/hello-node
+
+--------------------------------------------------------------------------------
++
+Create a service account for the Eunomia template processor:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ **oc create serviceaccount -n cluster-config gitops-runner**
+serviceaccount/gitops-runner created
+--------------------------------------------------------------------------------
++
+Grant the service account whatever rights it will need to configure resources:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ **oc adm policy add-cluster-role-to-user cluster-admin system:serviceaccount:cluster-config:gitops-runner**
+clusterrole.rbac.authorization.k8s.io/cluster-admin added: "system:serviceaccount:cluster-config:gitops-runner"
+--------------------------------------------------------------------------------
++
+Create a `GitOpsConfig` for Eunomia that points to your `openshift-gitops-lab` repository and uses the `quay.io/kohlstechnology/eunomia-applier:v0.0.1` template processor:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ **oc apply -f - <<EOF
+apiVersion: eunomia.kohls.io/v1alpha1
+kind: GitOpsConfig
+metadata:
+  name: openshift-gitops-lab
+  namespace: cluster-config
+spec:
+  templateSource:
+    uri: https://github.com/${GITHUB_ACCOUNT}/openshift-gitops-lab.git
+    ref: master
+  triggers:
+  - type: Change
+  - type: Periodic
+    cron: "@hourly"
+  serviceAccountRef: gitops-runner
+  templateProcessorImage: quay.io/kohlstechnology/eunomia-applier:v0.0.1
+  resourceHandlingMode: None
+  resourceDeletionMode: None
+EOF**
+gitopsconfig.eunomia.kohls.io/openshift-gitops-lab created
+--------------------------------------------------------------------------------
++
+NOTE: Oh no! The commands `oc create serviceaccount`, `oc adm policy add-cluster-role-to-user`, and even our `oc apply` command do not follow GitOps practices.
+Never fear, we can and will show how to do it the GitOps way soon!
+
+. Check Eunomia job completion.
++
+The change trigger on the GitOpsConfig will cause Eunomia to immediately process by creating a kubernetes job in the same directory as the GitOpsConfig.
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ **oc get job -n cluster-config**
+NAME                                       COMPLETIONS   DURATION   AGE
+gitopsconfig-openshift-gitops-lab-jkadel   1/1           51s        2m30s
+--------------------------------------------------------------------------------
++
+The Eunomia job log shows you the setup from git and then the output of Ansible running the `openshift-applier` role against your repository:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ **oc logs -n cluster-config -f job/gitopsconfig-openshift-gitops-lab-jkadel**
+Cloning Repositories
+Cloning into '/git/templates'...
+Cloning into '/git/parameters'...
+Setting cluster-related environment variable
+Context "current" created.
+Switched to context "current".
+Error from server (NotFound): routes.route.openshift.io "docker-registry" not found
+Processing Parameters
+- extracting openshift-applier to /git/templates/galaxy/openshift-applier
+- openshift-applier (master) was installed successfully
+- extracting self to /git/templates/galaxy/self
+- self (master) was installed successfully
+
+... OUTPUT OMITTED ...
+
+RUNNING HANDLER [openshift-applier : Clean up temporary dependency dir]
+changed: [localhost] => (item=/tmp/ansible.RFC9qm/)
+
+RUNNING HANDLER [openshift-applier : Clean up temporary Jinja directory]
+changed: [localhost] => (item=/tmp/ansible.reO3Mm)
+
+PLAY RECAP
+localhost                  : ok=36   changed=9    unreachable=0    failed=0    skipped=34   rescued=0    ignored=0
+
+CREATE_MODE and/or DELETE_MODE is set to None; This means that the template processor already applied the resources. Skipping the Manage Resources step.
+--------------------------------------------------------------------------------
+
+. Finally, confirm that the route hostname has been recreated as expected:
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ **oc get route -n openshift-image-registry**
+NAME             HOST/PORT                                                  PATH   SERVICES         PORT       TERMINATION   WILDCARD
+image-registry   image-registry.apps.cluster-d8f5.sandbox1349.opentlc.com          image-registry   5000-tcp                 None
+--------------------------------------------------------------------------------
+
+GitOps Workflow for a complex use case as a Cluster Administration
+------------------------------------------------------------------
+
+In this next section of the lab you will begin working with a full-featured OpenShift GitOps repository.
+The link:https://github.com/redhat-cop/operationalizing-openshift-lab/[operationalizing-openshift-lab]
+repository includes a collection of best practices examples developed by the Red Hat containers community of practice.
+
+Using this repository as a starting point we are going to establish an automated strategy for managing configuration of an operationalized cluster, including things like:
+
+* Enabling Cluster Autoscaling
+* Configuring authentication and authorization
+* Configuring namespace creation
+* Setting up quotas & limits for applications
+* Applying automated certificate management for applications
+* Deploying initial workloads
+* Deploying custom dashboards and setting up alerts
+
+Red Hat Containers Community of Practice GitOps Repository
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+In this configuration you will see an `openshift-applier` inventory that is configured with the ability to bootstrap its own GitOps configuration.
 You can examine the one we're going to use at link:templates/cluster-gitops.yaml[templates/cluster-gitops.yaml].
 Let's use Applier to roll out the config.
 
 . Fork the link:https://github.com/redhat-cop/operationalizing-openshift-lab/[operationalizing-openshift-lab] repository into your own account by selecting the *Fork* button and then if necessary, select the account for which the repository should be forked to.
 
-. Configure your git client environment.
-+
-Before you start using git it is helpful to configure your git environment.
-Set your `user.name`, `user.email`, and `push.default` settings, substituting
-your name and email address in the following commands:
+. Clone your fork locally using the `GITHUB_ACCOUNT` variable you set previously:
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
-$ **git config --global user.name "Your Name"**
-$ **git config --global user.email you@example.com**
-$ **git config --global push.default simple**
---------------------------------------------------------------------------------
-
-. Clone the fork locally by first setting your GitUHub username as a variable called __GITHUB_ACCOUNT__ and then cloning the repository.
-+
-[subs=+quotes]
---------------------------------------------------------------------------------
-$ **GITHUB_ACCOUNT=__YOUR_GITHUB_ACCOUNT__**
 $ **git clone https://github.com/${GITHUB_ACCOUNT}/operationalizing-openshift-lab**
 Cloning into \'operationalizing-openshift-lab'...
 remote: Enumerating objects: 77, done.
@@ -165,8 +757,7 @@ Resolving deltas: 100% (129/129), done.
 
 . Update repository references in source to make use of your GitHub account instead of the upstream repository.
 +
-There are references to the repository in `requiremens.yml` and `templates/cluster-gitops.yaml`.
-The `requirements.yml` is used by the OpenShift applier during pre and post steps to pull down ansible roles.
+There are references to the repository in `requirements.yml` and `templates/cluster-gitops.yaml`.
 The `templates/cluster-gitops.yaml` will be used to configure Eunomia to point to your repository.
 +
 [subs=+quotes]
@@ -250,8 +841,10 @@ Commit changes to your git working directory:
 [subs=+quotes]
 --------------------------------------------------------------------------------
 $ *git commit -m "Update settings for initial lab run"*
-[master 00805da] Update to forked repo in requirements.yml
- 1 file changed, 1 insertion(+), 1 deletion(-)
+[master 9d96661] Update settings for initial lab run
+ 4 files changed, 59 insertions(+), 29 deletions(-)
+ rewrite .applier/group_vars/seed-hosts/auth.yml (76%)
+ create mode 100644 ldap-ca.crt
 --------------------------------------------------------------------------------
 +
 Push your commit to your GitHub repository, authenticating when prompted:
@@ -399,8 +992,7 @@ It is possible that the node where the job ran will terminate before the logs ca
 It may take up to 6 minutes for the cluster to create the replacement nodes.
 You may watch for the new nodes to become available with `oc get nodes -w`.
 
-Exploring Our Newly Configured Cluster
--------------------------------------
+=== Exploring Your Newly Configured Cluster
 
 At this point we expect to have a working GitOps workflow for our shiny new cluster. Let's take a few moments to examine the state of our cluster in greater detail.
 
@@ -420,7 +1012,7 @@ Using project "default".
 
 ----
 
-=== Authentication and Authorization
+==== Authentication and Authorization
 
 One of the first things we've done in this cluster is configured multi-user authentication to an external LDAP provider. This will allow us to have multiple different users logged into our cluster with various roles and policies applied.
 
@@ -477,10 +1069,10 @@ Now let's test the login capabilities. First we'll grab the cluster console URL:
 $ *oc whoami --show-console*
 https://console-openshift-console.apps.example.com
 --------------------------------------------------------------------------------
-+
+
 Now test login with user "karla", "david", or "andrew" using the same password as was used for LDAP bind.
 
-=== MachineSets and AutoScalers
+==== MachineSets and AutoScalers
 
 A common ask in the enterprise is for administrators  to create various customized types of nodes.
 This could be done for various purposes such as:
@@ -527,7 +1119,7 @@ cluster-1b5b-fxs69-compute-ap-northeast-1d   MachineSet   cluster-1b5b-fxs69-com
 
 Feel free to experiment with deploying some pods such that the machine autoscalers will trigger a scale-up.
 
-=== Customized Project Creation
+==== Customized Project Creation
 
 Another common enterprise use case is to customize the project creation flow such that cluster administrators can maintain some control over the process.
 
@@ -557,7 +1149,6 @@ $ *oc logs -n namespace-configuration-operator $(oc get pod -n namespace-configu
 $ *oc get namespaceconfig -n namespace-configuration-operator*
 NAME                    AGE
 cakephp-rolebindings    85m
-default-role-bindings   50m
 gitops                  50m
 large-size              18h
 multitenant             18h
@@ -590,13 +1181,7 @@ $ *oc whoami --show-console*
 
 You'll notice that some projects that have been created that only he has access to. This is to emulate the separation of concerns between Cluster Administrators and Application Developers. We'll use these projects later when we set up our *Application GitOps*
 
-GitOps in Action
-----------------
-
-In this section of the lab you will explore a few scenarios where you reconfigure the cluster using GitOps patterns.
-
-LDAP Group Sync Reconfiguration
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+=== LDAP Group Sync Reconfiguration
 
 The initial parameters you used to configure LDAP group sync configured a cronjob to run every five minutes.
 Now that you have given it a little time to run, you will now configure it to run hourly instead.
