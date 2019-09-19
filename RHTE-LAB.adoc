@@ -1,8 +1,7 @@
 Operationalizing OpenShift Lab
 ==============================
 
-:toc:
-:toc-placement!:
+:toc: macro
 
 image::media/ops-workflow.png[]
 
