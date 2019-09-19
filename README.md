@@ -1,5 +1,7 @@
 # How to Apply Infrastructure as Code Principles to OpenShift 4 Operationalization
 
+![GitOps Workflow](media/ops-workflow.png)
+
 In OpenShift 4, every cluster starts out the same way -- a bootstrapped control plane with 3 masters, and 3 compute nodes. But in order for this cluster to provide value to an organization, it needs further configuration. This repository is a reference implemntation that functions as a starting point for establishing an automated strategy for managing configuration of an operationalized cluster.
 
 We've included examples of:

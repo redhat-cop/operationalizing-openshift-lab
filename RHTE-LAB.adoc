@@ -2,6 +2,10 @@ Operationalizing OpenShift Lab
 ==============================
 
 :toc-title:
+:toc-placement!:
+
+image::media/ops-workflow.png[]
+
 toc::[]
 
 In OpenShift 4, every cluster starts out the same way -- a bootstrapped control plane with master, and worker nodes.
