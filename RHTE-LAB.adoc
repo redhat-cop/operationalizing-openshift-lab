@@ -323,7 +323,7 @@ Set a `GITHUB_ACCOUNT` variable with the name of your GitHub account.
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
-$ **GITHUB_ACCOUNT=__YOUR_GITHUB_ACCOUNT__**
+$ **export GITHUB_ACCOUNT=__YOUR_GITHUB_ACCOUNT__**
 --------------------------------------------------------------------------------
 
 . Create a `requirements.yml` configuration.
@@ -742,6 +742,13 @@ In this configuration you will see an `openshift-applier` inventory that is conf
 You can examine the one we're going to use at link:templates/cluster-gitops.yaml[templates/cluster-gitops.yaml].
 Let's use Applier to roll out the config.
 
+. First, let's verify our `GITHUB_ACCOUNT` environment variable is still set.
++
+[subs=+quotes]
+--------------------------------------------------------------------------------
+$ **export GITHUB_ACCOUNT=__YOUR_GITHUB_ACCOUNT__**
+--------------------------------------------------------------------------------
+
 . Fork the link:https://github.com/redhat-cop/operationalizing-openshift-lab/[operationalizing-openshift-lab] repository into your own account by selecting the *Fork* button and then if necessary, select the account for which the repository should be forked to.
 
 . Clone your fork locally using the `GITHUB_ACCOUNT` variable you set previously:
@@ -913,13 +920,46 @@ $ *ansible-playbook -i .applier/ galaxy/openshift-applier/playbooks/openshift-cl
 +
 NOTE: We must override `exclude_tags` to set cluster secrets because this variable is set in `.applier/group_vars/seed-hosts/main.yml` to exclude the `cluster-secrets` tag.
 
-. Create Eunomia GitOpsConfig by running `openshift-applier` with the objects tagged "gitops":
+. Kick off Eunomia by running `openshift-applier` with the objects tagged "gitops":
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
 $ *ansible-playbook -i .applier/ galaxy/openshift-applier/playbooks/openshift-cluster-seed.yml \
   -e include_tags=gitops*
 --------------------------------------------------------------------------------
+
+. *Wait for nodes to come back*. By running the above command, you've kicked off a Eunomia run. This run will create a Kubernetes `Job` that runs OpenShift Applier against your repo. One of the items this repo is configured to manage is your OpenShift `MachineSets`. By default, OpenShift nodes are designated either as a `master` (designated by the label `node-role.kubernetes.io/master=`) or a `worker` (designated by the label `node-role.kubernetes.io/master=`). For our cluster we would like to further configure a layer of isolation: designated `compute` and `logging` worker nodes. In order to do that, we replace the default `MachineSets`, which will re-provision all of the nodes, including the master. Let's watch this happen. First, we'll run `watch oc get machinesets` until the output looks something like this.
++
+[subs=+quotes]
+----
+$ *watch oc get machinesets -n openshift-machine-api*
+Every 2.0s: oc get machinesets -n openshift-machine-api                                                                                                                                                                            Wed Sep 25 08:03:13 2019
+
+NAME                                       DESIRED   CURRENT   READY   AVAILABLE   AGE
+cluster-8fa0-9gfz9-compute-eu-west-1a      1         1                             3m33s
+cluster-8fa0-9gfz9-compute-eu-west-1b      1         1                             3m33s
+cluster-8fa0-9gfz9-compute-eu-west-1c      0         0                             3m33s
+cluster-8fa0-9gfz9-logging-es-eu-west-1a   1         1                             3m33s
+cluster-8fa0-9gfz9-logging-es-eu-west-1b   0         0                             3m33s
+cluster-8fa0-9gfz9-logging-es-eu-west-1c   0         0                             3m33s
+cluster-8fa0-9gfz9-worker-eu-west-1a       0         0                             18h
+cluster-8fa0-9gfz9-worker-eu-west-1b       0         0                             18h
+cluster-8fa0-9gfz9-worker-eu-west-1c       0         0                             18h
+----
+
+. Next, we can `watch oc get nodes` until all of our new nodes are ready.
++
+[subs=+quotes]
+----
+$ *watch oc get nodes*
+Every 2.0s: oc get nodes                                                                                                                                                                                              Wed Sep 25 08:03:13 2019
+
+NAME                                         STATUS                     ROLES    AGE   VERSION
+ip-10-0-128-223.eu-west-1.compute.internal   Ready                      master   18h   v1.13.4+ab8449285
+ip-10-0-159-213.eu-west-1.compute.internal   Ready                      master   18h   v1.13.4+ab8449285
+ip-10-0-167-35.eu-west-1.compute.internal    Ready,SchedulingDisabled   worker   18h   v1.13.4+ab8449285
+ip-10-0-168-183.eu-west-1.compute.internal   Ready                      master   18h   v1.13.4+ab8449285
+----
 
 . Check Eunomia Configuration created by `openshift-applier`.
 +
