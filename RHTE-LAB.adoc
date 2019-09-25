@@ -62,7 +62,7 @@ $ **oc get route -n openshift-image-registry**
 No resources found.
 --------------------------------------------------------------------------------
 
-. Use the `oc expose` command to create a route for the service:
+. Use the `oc create route` command to create a route for the service:
 +
 It is a common practice to expose the OpenShift container image registry outside of the cluster so that CI/CD pipelines can
 link:http://v1.uncontained.io/playbooks/continuous_delivery/image_promotion.html[move images between clusters as a form of Promotion].
@@ -70,8 +70,8 @@ We can do this manually using the oc expose command.
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
-$ **oc expose service -n openshift-image-registry image-registry**
-route.route.openshift.io/image-registry exposed
+$ **oc create route reencrypt -n openshift-image-registry --service=image-registry**
+route.route.openshift.io/image-registry created
 --------------------------------------------------------------------------------
 
 . Confirm the route has been created:
@@ -79,8 +79,8 @@ route.route.openshift.io/image-registry exposed
 [subs=+quotes]
 --------------------------------------------------------------------------------
 $ **oc get route -n openshift-image-registry**
-NAME            HOST/PORT                                                                          PATH  SERVICES        PORT      TERMINATION  WILDCARD
-image-registry  image-registry-openshift-image-registry.apps.cluster-d8f5.sandbox1349.opentlc.com        image-registry  5000-tcp               None
+NAME            HOST/PORT                                                                         PATH  SERVICES        PORT      TERMINATION  WILDCARD
+image-registry  image-registry-openshift-image-registry.apps.cluster-0b1e.sandbox506.opentlc.com        image-registry  5000-tcp  reencrypt    None
 --------------------------------------------------------------------------------
 
 . Attempt to reconfigure the route.
@@ -88,16 +88,16 @@ image-registry  image-registry-openshift-image-registry.apps.cluster-d8f5.sandbo
 The hostname automatically assigned composed of the service name and the namespace.
 A friendlier name would be to change the leading `image-registry-openshift-image-registry` to just `image-registry`.
 +
-Attempt to adjust the route with `oc expose`:
+Attempt to adjust the route with `oc create route`:
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
-$ **oc expose service -n openshift-image-registry image-registry \
+$ **oc create route reencrypt -n openshift-image-registry --service=image-registry \
   --hostname=image-registry.apps.cluster-d8f5.sandbox1349.opentlc.com**
 Error from server (AlreadyExists): routes.route.openshift.io "image-registry" already exists
 --------------------------------------------------------------------------------
 +
-No luck, the `oc expose` command is not idempotent.
+No luck, the `oc create route` command is not idempotent.
 Many of the subcommands provided by `oc` are helpful for getting things started, but are not suited for maintaining your configuration later.
 If we want to do it right we will need a workflow made from declarative configuration, not a series of commands.
 
@@ -110,14 +110,21 @@ $ **mkdir openshift-gitops-lab**
 $ **cd openshift-gitops-lab/**
 --------------------------------------------------------------------------------
 
-. Dump the route definition created by `oc expose` to a YAML file called `image-registry-route.yaml`:
+. Dump the route definition created by `oc create route` to a YAML file called `image-registry-route.yaml`:
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
 $ **oc get route -n openshift-image-registry -o yaml image-registry >image-registry-route.yaml**
 --------------------------------------------------------------------------------
 +
-Then edit `image-registry-route.yaml`, removing everything except the bits you actually want to manage.
+Then edit `image-registry-route.yaml`, removing everything except the bits you actually want to manage:
++
+* Remove all content from the `metadata` section except `name` and `namespace`
+* Remove `spec.subdomain`, it is empty and so not needed
+* Remove `spec.to.weight`, the value 100 is just a default value and does not need to be managed
+* Remove `spec.wildcardPolicy`, it is not needed, `None` is the default
+* Remove the `status` section entirely
++
 The result should look something like this, but with your own cluster domain for the host:
 +
 --------------------------------------------------------------------------------
@@ -130,6 +137,8 @@ spec:
   host: image-registry-openshift-image-registry.apps.cluster-d8f5.sandbox1349.opentlc.com
   port:
     targetPort: 5000-tcp
+  tls:
+    termination: reencrypt
   to:
     kind: Service
     name: image-registry
@@ -170,8 +179,8 @@ And confirm that the route hostname has been updated:
 [subs=+quotes]
 --------------------------------------------------------------------------------
 $ **oc get route -n openshift-image-registry**
-NAME             HOST/PORT                                                  PATH   SERVICES         PORT       TERMINATION   WILDCARD
-image-registry   image-registry.apps.cluster-d8f5.sandbox1349.opentlc.com          image-registry   5000-tcp                 None
+NAME            HOST/PORT                                                PATH  SERVICES        PORT      TERMINATION  WILDCARD
+image-registry  image-registry.apps.cluster-0b1e.sandbox506.opentlc.com        image-registry  5000-tcp  reencrypt    None
 --------------------------------------------------------------------------------
 
 Ansible Automation
@@ -206,6 +215,8 @@ spec:
   host: image-registry.{{ openshift_ingress_default_subdomain }}
   port:
     targetPort: 5000-tcp
+  tls:
+    termination: reencrypt
   to:
     kind: Service
     name: image-registry
@@ -714,8 +725,8 @@ CREATE_MODE and/or DELETE_MODE is set to None; This means that the template proc
 [subs=+quotes]
 --------------------------------------------------------------------------------
 $ **oc get route -n openshift-image-registry**
-NAME             HOST/PORT                                                  PATH   SERVICES         PORT       TERMINATION   WILDCARD
-image-registry   image-registry.apps.cluster-d8f5.sandbox1349.opentlc.com          image-registry   5000-tcp                 None
+NAME            HOST/PORT                                                PATH  SERVICES        PORT      TERMINATION  WILDCARD
+image-registry  image-registry.apps.cluster-0b1e.sandbox506.opentlc.com        image-registry  5000-tcp  reencrypt    None
 --------------------------------------------------------------------------------
 
 GitOps Workflow for a complex use case as a Cluster Administration
