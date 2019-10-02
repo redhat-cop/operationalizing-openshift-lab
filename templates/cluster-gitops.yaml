@@ -35,6 +35,7 @@ objects:
       contextDir: ${CLUSTER_CONFIG_REPO_DIR}
     triggers:
     - type: Change
+    - type: Webhook
     #- type: Periodic
       #cron: '*/1 * * * *'
     serviceAccountRef: eunomia-runner
