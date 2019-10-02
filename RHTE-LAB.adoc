@@ -157,7 +157,7 @@ NOTE: The first run of `oc apply` will issue a warning and add an annotation to 
 
 . Now let's test that you can make our update to the short name.
 +
-Using a text editior, edit `image-registry-route.yaml` and shorten the hostname.
+Using a text editor, edit `image-registry-route.yaml` and shorten the hostname.
 +
 A `sed` command which makes this edit is:
 +
@@ -188,7 +188,7 @@ Ansible Automation
 
 In this next section you will have a look at how to automate an `oc apply` based workflow with Ansible.
 The configuration we put together so far is a bit brittle.
-For example, if this were managing real clusters you would want to dynamically determin the application domain for cluster ingress.
+For example, if this were managing real clusters you would want to dynamically determine the application domain for cluster ingress.
 Let's explore how that might look:
 
 . Create a `templates` directory and move your static route definition to have a `.j2` file extension, indicating Jinja2 template content:
@@ -527,7 +527,7 @@ $ *curl https://get.helm.sh/helm-v2.14.3-linux-amd64.tar.gz \
 $ *ls -l ~/bin/helm*
 -rwxr-xr-x. 1 lab-user users 41819776 Jul 30 16:35 /home/<lab_user>-redhat.com/bin/helm*
 --------------------------------------------------------------------------------
-NOTE: This command only installs the `helm` executible from the release.
+NOTE: This command only installs the `helm` executable from the release.
 The `tiller` component of Helm is not needed to install Eunomia which eliminates the security implications that would be required by making use of this component.
 
 . From your HOME directory, clone Eunomia from the KohlsTechnology git repository:
@@ -601,7 +601,7 @@ Eunomia is now running, but does not yet have any configuration for GitOps proce
 Running Applier with Eunomia
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Now, you can set up eunomia to leverage your `openshift-gitops-lab` repository to run `openshift-applier` for you.
+Now, you can set up Eunomia to leverage your `openshift-gitops-lab` repository to run `openshift-applier` for you.
 In this section of the lab you will setup the GitOps configuration manually.
 Later in the lab you will see how you can use `openshift-applier` to automatically configure or reconfigure the GitOps configuration.
 
@@ -1437,7 +1437,7 @@ Let's configure Eunomia to run periodically jobs.
 
 . Edit the template `cluster-gitops.yaml` template to add a `SCHEDULE` parameter:
 +
-Find the two commented lines in the provided template and enabel periodic processing using the `"${SCHEDULE}"` parameter value for the `cron` value.
+Find the two commented lines in the provided template and enable periodic processing using the `"${SCHEDULE}"` parameter value for the `cron` value.
 Once updated the triggers for the GitOpsConfig should read:
 +
 --------------------------------------------------------------------------------
@@ -1451,7 +1451,7 @@ Next add the `SCHEDULE` parameter to the template definition with the default va
 +
 --------------------------------------------------------------------------------
 - name: SCHEDULE
-  description: Periodic scheludle for gitops processing
+  description: Periodic schedule for gitops processing
   value: "@hourly"
 --------------------------------------------------------------------------------
 +
@@ -1463,7 +1463,7 @@ $ **sed -i \'s/#- type: Periodic/- type: Periodic/' templates/cluster-gitops.yam
 $ **sed -i \'s/#cron: .*/cron: "${SCHEDULE}"/' templates/cluster-gitops.yaml**
 $ **cat >>templates/cluster-gitops.yaml <<EOF
 - name: SCHEDULE
-  description: Periodic scheludle for gitops processing
+  description: Periodic schedule for gitops processing
   value: "@hourly"
 EOF**
 --------------------------------------------------------------------------------
@@ -1542,7 +1542,7 @@ Stage this hunk [y,n,q,a,d,/,j,J,g,e,?]? **y**
    - name: TEMPLATE_PROCESSOR_IMAGE
      value: quay.io/KohlsTechnology/eunomia-applier:v0.0.1
 +  - name: SCHEDULE
-+    description: Periodic scheludle for gitops processing
++    description: Periodic schedule for gitops processing
 +    value: "@hourly"
 Stage this hunk [y,n,q,a,d,/,K,g,e,?]? **y**
 
@@ -2430,7 +2430,7 @@ To https://github.com/__GITHUB_ACCOUNT__/cakephp-ex.git
    1391022..6fbc6b5  master -> master
 --------------------------------------------------------------------------------
 
-. Trigger eunomia to release to dev:
+. Trigger Eunomia to release to dev:
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------

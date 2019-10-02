@@ -64,7 +64,7 @@ Apply the configurations to the cluster:
 
 ### Initializing the GitOps Workflow
 
-Now we can set up eunomia to monitor a repo of configs, which in turn will apply configs to set up our cluster. Eunomia provides a CR called a `GitOpsConfig` to set up a monitor on a repository. You can examine the one we're going to use at [templates/cluster-gitops.yaml](templates/cluster-gitops.yaml). Let's use Applier to roll out the config.
+Now we can set up Eunomia to monitor a repo of configs, which in turn will apply configs to set up our cluster. Eunomia provides a CR called a `GitOpsConfig` to set up a monitor on a repository. You can examine the one we're going to use at [templates/cluster-gitops.yaml](templates/cluster-gitops.yaml). Let's use Applier to roll out the config.
 
     git clone https://github.com/redhat-cop/operationalizing-openshift-lab
     cd operationalizing-openshift-lab
@@ -113,13 +113,13 @@ To login to the web console, locate the URL of the OpenShift web console and nav
 
 Two login options are displayed. Select _LDAP_ and login with a valid username and password
 
-If you are authenticated using both methods, the confgurations were LDAP authentication was successful.
+If you are authenticated using both methods, the configurations were LDAP authentication was successful.
 
 #### LDAP Group Synchronization
 
 Many organizations that make use of LDAP directory services arrange their users into Groups. This allows Administrators the ability to apply the same set of permissions across multiple users. A similar concept can be applied using OpenShift's Role Based Access (RBAC) facility where multiple users can be organized into groups and roles can be applied. Since OpenShift can make use of users defined in LDAP servers, [groups defined in LDAP can be synchronized into OpenShift](https://docs.openshift.com/container-platform/4.1/authentication/ldap-syncing.html) so that preexisting structures can also be applied.
 
-Since users, groups and their associated membership within the LDAP server changes frequently, it is important that the execution of the group syncrhonization process take place in a routine manner. While a job scheduler could be utilized, such as standalone [cron](https://en.wikipedia.org/wiki/Cron), OpenShift provides the facility to to execute tasks as _Jobs_ along with the repeative exeuction of these jobs in a scheduled manner as a [CronJob](https://docs.openshift.com/container-platform/4.1/nodes/jobs/nodes-nodes-jobs.html). The process of executing the synchronization involves the use of the OpenShift command line tool which can triggered within a _CronJob_. A `LDAPSyncConfig` object defines how to connect to the LDAP instance from OpenShift along with the groups which should be synchronized.
+Since users, groups and their associated membership within the LDAP server changes frequently, it is important that the execution of the group synchronization process take place in a routine manner. While a job scheduler could be utilized, such as standalone [cron](https://en.wikipedia.org/wiki/Cron), OpenShift provides the facility to to execute tasks as _Jobs_ along with the repetitive execution of these jobs in a scheduled manner as a [CronJob](https://docs.openshift.com/container-platform/4.1/nodes/jobs/nodes-nodes-jobs.html). The process of executing the synchronization involves the use of the OpenShift command line tool which can triggered within a _CronJob_. A `LDAPSyncConfig` object defines how to connect to the LDAP instance from OpenShift along with the groups which should be synchronized.
 
 As part of the GitOps automation, we deployed a Group Sync config. You can check the status of the _Job_.
 
@@ -131,7 +131,7 @@ Verify LDAP groups have been synchronized into OpenShift
 
     oc get groups
 
-The prescense of groups and corresponding users indicate the successful completion of this iteration.
+The presence of groups and corresponding users indicate the successful completion of this iteration.
 
 ### Customized Project Creation
 
