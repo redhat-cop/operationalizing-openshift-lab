@@ -12,10 +12,10 @@ However, in order for this cluster to provide value to an organization, it needs
 
 In this lab, we are going to develop a strategy for making these configurations and maintaining them over time.
 We are going to employ the concepts of
-link:https://openpracticelibrary.com/practice/everything-as-code/[Everything as Code] and
-link:https://thenewstack.io/what-is-gitops-and-why-it-might-be-the-next-big-thing-for-devops/[GitOps]
+link:https://openpracticelibrary.com/practice/everything-as-code/[Everything as Code^] and
+link:https://thenewstack.io/what-is-gitops-and-why-it-might-be-the-next-big-thing-for-devops/[GitOps^]
 to create self-managing OpenShift clusters, where the day 2 operations are done through
-link:https://www.weave.works/blog/gitops-operations-by-pull-request[Pull Requests].
+link:https://www.weave.works/blog/gitops-operations-by-pull-request[Pull Requests^].
 
 Note that the purpose of this lab is not to teach how each of the components works individually, but to show how one can employ a common automation strategy to a myriad of different configurations.
 
@@ -26,11 +26,11 @@ Provisioning your Lab Environment
 
 For Red Hat Tech Exchange, the GUID grabber link to get your lab environment is:
 
-https://www.opentlc.com/gg/gg.cgi?profile=generic_rhte
+link:https://www.opentlc.com/gg/gg.cgi?profile=generic_rhte[^]
 
 This lab code is "A2031", the activation code will be provided during the event.
 
-If you are running through the lab on your own then you may provision an "OpenShift 4 Configuration" lab environment from https://labs.opentlc.com/.
+If you are running through the lab on your own then you may provision an "OpenShift 4 Configuration" lab environment from link:https://labs.opentlc.com/[^].
 
 :numbered:
 
@@ -38,9 +38,9 @@ GitOps Workflow for a Simple Use Case
 -------------------------------------
 
 _GitOps_ is a form of Infrastructure as Code practice where all of the configurations that define a system are managed in a git repository, and automatically and idempotently applied to that system each time commits are made to the repository.
-For this lab, we are going to enable such a workflow using an Operator called link:https://github.com/KohlsTechnology/eunomia[Eunomia] and link:https://github.com/redhat-cop/openshift-applier[OpenShift Applier], an automation framework for OpenShift.
+For this lab, we are going to enable such a workflow using an Operator called link:https://github.com/KohlsTechnology/eunomia[Eunomia^] and link:https://github.com/redhat-cop/openshift-applier[OpenShift Applier^], an automation framework for OpenShift.
 Eunomia provides a workflow for watching git repos, triggering actions when new commits are detected.
-The action, in this case, will be a link:https://kubernetes.io/docs/tasks/job/[Kubernetes Job] that executes Applier.
+The action, in this case, will be a link:https://kubernetes.io/docs/tasks/job/[Kubernetes Job^] that executes Applier.
 
 You will begin by configuring a simple and common task for OpenShift clusters, exposing the cluster's integrated image registry.
 First you will configure a registry route manually and then build up to GitOps step by step.
@@ -65,7 +65,7 @@ No resources found.
 . Use the `oc create route` command to create a route for the service:
 +
 It is a common practice to expose the OpenShift container image registry outside of the cluster so that CI/CD pipelines can
-link:http://v1.uncontained.io/playbooks/continuous_delivery/image_promotion.html[move images between clusters as a form of Promotion].
+link:http://v1.uncontained.io/playbooks/continuous_delivery/image_promotion.html[move images between clusters as a form of Promotion^].
 We can do this manually using the oc expose command.
 +
 [subs=+quotes]
@@ -312,7 +312,7 @@ You also begin your `git` journey.
 
 . Create a new public GitHub repository:
 +
-https://github.com/new
+link:https://github.com/new[^]
 +
 The instructions below assume that you name your repository "openshift-gitops-lab".
 Make the repository public and do not initialize the repository.
@@ -482,7 +482,7 @@ $ **ansible-galaxy install -r requirements.yml -p galaxy**
 +
 NOTE: This step creates a `galaxy` subdirectory within your git repository.
 You should create a `.gitignore` configuration to exclude these files from later `git` activity.
-(https://git-scm.com/docs/gitignore)
+(link:https://git-scm.com/docs/gitignore[^])
 
 . Run `openshift-applier` using the `openshift-cluster-seed.yml` playbook.
 +
@@ -511,9 +511,9 @@ Install Eunomia
 ~~~~~~~~~~~~~~
 
 In this section of the lab we install Eunomia following the installation instructions provided in the
-link:https://github.com/KohlsTechnology/eunomia/blob/master/README.md[Eunomia README.md].
+link:https://github.com/KohlsTechnology/eunomia/blob/master/README.md[Eunomia README.md^].
 
-. You will install the Eunomia operator using a provided link:https://helm.sh[Helm] template.
+. You will install the Eunomia operator using a provided link:https://helm.sh[Helm^] template.
 Install the `helm` command into your `~/bin` directory.
 +
 [subs=+quotes]
@@ -733,7 +733,7 @@ GitOps Workflow for a complex use case as a Cluster Administration
 ------------------------------------------------------------------
 
 In this next section of the lab you will begin working with a full-featured OpenShift GitOps repository.
-The link:https://github.com/redhat-cop/operationalizing-openshift-lab/[operationalizing-openshift-lab]
+The link:https://github.com/redhat-cop/operationalizing-openshift-lab/[operationalizing-openshift-lab^]
 repository includes a collection of best practices examples developed by the Red Hat containers community of practice.
 
 Using this repository as a starting point we are going to establish an automated strategy for managing configuration of an operationalized cluster, including things like:
@@ -760,7 +760,7 @@ Let's use Applier to roll out the config.
 $ **export GITHUB_ACCOUNT=__YOUR_GITHUB_ACCOUNT__**
 --------------------------------------------------------------------------------
 
-. Fork the link:https://github.com/redhat-cop/operationalizing-openshift-lab/[operationalizing-openshift-lab] repository into your own account by selecting the *Fork* button and then if necessary, select the account for which the repository should be forked to.
+. Fork the link:https://github.com/redhat-cop/operationalizing-openshift-lab/[operationalizing-openshift-lab^] repository into your own account by selecting the *Fork* button and then if necessary, select the account for which the repository should be forked to.
 
 . Clone your fork locally using the `GITHUB_ACCOUNT` variable you set previously:
 +
@@ -788,7 +788,7 @@ $ *sed -i "s|https://github.com/redhat-cop/operationalizing-openshift-lab|https:
   requirements.yml templates/cluster-gitops.yaml*
 --------------------------------------------------------------------------------
 
-. The LDAP authentication and group sync configuration for this lab will communicate with an link:https://access.redhat.com/products/identity-management[IPA] server in a secure fashion.
+. The LDAP authentication and group sync configuration for this lab will communicate with an link:https://access.redhat.com/products/identity-management[IPA^] server in a secure fashion.
 Download the OpenTLC shared IPA TLS certificate authority that will be used to facilitate the communication:
 +
 [subs=+quotes]
@@ -886,8 +886,7 @@ To https://github.com/__GITHUB_ACCOUNT__/operationalizing-openshift-lab
 --------------------------------------------------------------------------------
 +
 NOTE: If your GitHub account is configured for two-factor authentication then you will need to configure a
-link:https://help.github.com/en/articles/creating-a-personal-access-token-for-the-command-line[GitHub personal access token]
-to authenticate for the `git push` command.
+link:https://help.github.com/en/articles/creating-a-personal-access-token-for-the-command-line[GitHub personal access token^] to authenticate for the `git push` command.
 
 Configure Eunomia
 ~~~~~~~~~~~~~~~~
@@ -1177,7 +1176,7 @@ Feel free to experiment with deploying some pods such that the machine autoscale
 
 Another common enterprise use case is to customize the project creation flow such that cluster administrators can maintain some control over the process.
 
-When a user creates a project in our cluster, we use the link:https://github.com/redhat-cop/namespace-configuration-operator[Namespace Configuration Operator] to apply custom rules to that project.
+When a user creates a project in our cluster, we use the link:https://github.com/redhat-cop/namespace-configuration-operator[Namespace Configuration Operator^] to apply custom rules to that project.
 
 The operator itself has been deployed to the cluster. You can examine the deployment with the following:
 
@@ -1494,7 +1493,7 @@ $ **sed -i \'/^  - name: GitOps Config/a\    params_from_vars:\n      SCHEDULE: 
    .applier/group_vars/seed-hosts/main.yml**
 --------------------------------------------------------------------------------
 
-. Create a link:https://docs.ansible.com/ansible/latest/user_guide/playbooks_variables.html#defining-variables-in-files[vars file], `.applier/group_vars/seed-hosts/gitops.yml`, with a value for `gitops_schedule` to run at 07:30 and 19:30 every day:
+. Create a link:https://docs.ansible.com/ansible/latest/user_guide/playbooks_variables.html#defining-variables-in-files[vars file^], `.applier/group_vars/seed-hosts/gitops.yml`, with a value for `gitops_schedule` to run at 07:30 and 19:30 every day:
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
@@ -1586,7 +1585,7 @@ $ **oc get gitopsconfig -n cluster-config cluster-config -o yaml | grep \'^  tri
 Cluster Autoscaler Reconfiguration
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The initial configuration of the link:https://docs.openshift.com/container-platform/4.1/machine_management/creating-machineset.html#machine-api-overview_creating-machineset[OpenShift Machine API] provided in this lab has configured machine sets and the cluster autoscaler.
+The initial configuration of the link:https://docs.openshift.com/container-platform/4.1/machine_management/creating-machineset.html#machine-api-overview_creating-machineset[OpenShift Machine API^] provided in this lab has configured machine sets and the cluster autoscaler.
 In this exercise we will explore this configuration and add new parameters to customize the cluster autoscaler configuration.
 
 . Inspect the cluster autoscaler configuration:
@@ -1847,7 +1846,7 @@ As you go through this portion of the lab, you will learn the following.
 Creating an App GitOps Repository
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-. Fork the link:https://github.com/redhat-gpte-devopsautomation/cakephp-ex[redhat-gpte-devopsautomation cakephp-ex] repository into your own account by selecting the *Fork* button and then if necessary, select the account for which the repository should be forked to.
+. Fork the link:https://github.com/redhat-gpte-devopsautomation/cakephp-ex[redhat-gpte-devopsautomation cakephp-ex^] repository into your own account by selecting the *Fork* button and then if necessary, select the account for which the repository should be forked to.
 
 . Clone the fork locally in your home directory:
 +
