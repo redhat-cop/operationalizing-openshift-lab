@@ -29,7 +29,7 @@ Let's go ahead and deploy Eunomia. We can do that via provided helm charts.
 
     git clone https://github.com/KohlsTechnology/eunomia.git
     helm template eunomia/deploy/helm/prereqs/ | oc apply -f -
-    helm template eunomia/deploy/helm/operator/ --set openshift.route.enabled=true | oc apply -f -
+    helm template eunomia/deploy/helm/operator/ --set eunomia.operator.openshift.route.enabled=true | oc apply -f -
 
 ### Creating Cluster Secrets
 

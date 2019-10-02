@@ -1234,6 +1234,34 @@ $ *oc whoami --show-console*
 
 You'll notice that some projects that have been created that only he has access to. This is to emulate the separation of concerns between Cluster Administrators and Application Developers. We'll use these projects later when we set up our *Application GitOps*
 
+=== Enabling Webhook Triggering for Eunomia
+
+At this point we have used the combination of Eunomia and OpenShift Applier to roll out some complex cluster configurations, and our new OpenShift cluster is looking pretty snazzy. However, we'll want to make changes to our cluster over time, and we want those changes to be driven by the configurations we've pushed to Git. In order to enable a true GitOps workflow, we need the ability to trigger Eunomia to re-run our Applier job every time we make a change in our repository. To do this, we'll set up a webhook in our repo to trigger Eunomia.
+
+. When we deployed eunomia via `helm`, we created a `Route` for the operator. This route exposes a webhook in eunomia. We need to grab the hostname of that route.
++
+[subs=+quotes]
+----
+$ **oc get route -n eunomia-operator**
+NAME               HOST/PORT                                                                    PATH      SERVICES           PORT      TERMINATION   WILDCARD
+eunomia-operator   eunomia-operator-eunomia-operator.apps.cluster-a9b2.sandbox338.opentlc.com             eunomia-operator   webhook                 None
+----
++
+**Copy the route hostname value** for use in the next step.
+
+. **Create a webhook in your repository.**
++
+Open your GitHub repository in your browser and navigate to the **Settings** tab.
+
+.. In the left sidebar menu, click on **Webhooks**, and then click the **Add webhook** button.
+.. In the **Payload URL** field enter a value of the format `http://<my route hostname>/webhook/`. For example: `http://eunomia-operator-eunomia-operator.apps.cluster-a9b2.sandbox338.opentlc.com/webhook/`
+.. In the **Content Type** field, select `application/json`.
+.. Under **Which events would you like to trigger this webhook?** ensure that `Just the push event` is selected
+.. Ensure the **Active** box is checked.
+.. Click **Add webhook**.
+
+If everything went properly, you should see a green checkbox next to your newly created webhook.
+
 === LDAP Group Sync Reconfiguration
 
 The initial parameters you used to configure LDAP group sync configured a cronjob to run every five minutes.
@@ -1395,18 +1423,7 @@ To https://github.com/__GITHUB_ACCOUNT__/operationalizing-openshift-lab.git
    3a51662..d4f7a8f  master -> master
 --------------------------------------------------------------------------------
 
-. Trigger Eunomia processing by setting the `trigger-update` annotation to the current timestamp:
-+
-[subs=+quotes]
---------------------------------------------------------------------------------
-$ **oc annotate --overwrite -n cluster-config gitopsconfig cluster-config trigger-update=$(date +"%FT%TZ")**
-gitopsconfig.eunomia.kohls.io/cluster-config annotated
---------------------------------------------------------------------------------
-+
-NOTE: Eunomia webhook support is under development.
-To speed up processing a webhook from GitHub will trigger processing.
-
-. Check that Eunomia has started a new job to apply the changes:
+. Since we configured a webhook in the previous section, a new Eunomia job should have started automatically. Check that Eunomia has started a new job to apply the changes:
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
@@ -1561,14 +1578,6 @@ Total 9 (delta 4), reused 0 (delta 0)
 remote: Resolving deltas: 100% (4/4), completed with 4 local objects.
 To https://github.com/__GITHUB_ACCOUNT__/operationalizing-openshift-lab.git
    8f466aa..df07dae  master -> master
---------------------------------------------------------------------------------
-
-. Trigger Eunomia processing:
-+
-[subs=+quotes]
---------------------------------------------------------------------------------
-$ **oc annotate --overwrite -n cluster-config gitopsconfig cluster-config trigger-update=$(date +"%FT%TZ")**
-gitopsconfig.eunomia.kohls.io/cluster-config annotated
 --------------------------------------------------------------------------------
 
 . Wait for Eunomia applier processing to complete and then check gitopsconfig definition:
@@ -1779,14 +1788,6 @@ Total 9 (delta 5), reused 0 (delta 0)
 remote: Resolving deltas: 100% (5/5), completed with 5 local objects.
 To git@github.com:__GITHUB_ACCOUNT__/operationalizing-openshift-lab.git
    2fa5a16..5c02182  master -> master
---------------------------------------------------------------------------------
-
-. Trigger Eunomia processing by setting the `trigger-update` annotation to the current timestamp:
-+
-[subs=+quotes]
---------------------------------------------------------------------------------
-$ **oc annotate --overwrite -n cluster-config gitopsconfig cluster-config trigger-update=$(date +"%FT%TZ")**
-gitopsconfig.eunomia.kohls.io/cluster-config annotated
 --------------------------------------------------------------------------------
 
 . Wait for Eunomia applier job completion and then check that the clusterautoscaler has been updated:
