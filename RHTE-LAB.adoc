@@ -1049,7 +1049,9 @@ You may watch for the new nodes to become available with `oc get nodes -w`.
 
 At this point we expect to have a working GitOps workflow for our shiny new cluster. Let's take a few moments to examine the state of our cluster in greater detail.
 
-For this part of the Lab, we are going to take on the persona of *David*, a cluster administrator. Let's log in as `david`.
+For this part of the Lab, we are going to take on the persona of *David*, a cluster administrator. Let's log in as `david`.  
+
+NOTE: To log in as `david`, use the LDAP_BIND_PASSWORD that is included in the authentication unit of the "Red Hat OpenShift Container Platform 4 Configuration" course in the learning management system.
 
 [subs=+quotes]
 ----
