@@ -547,7 +547,9 @@ Resolving deltas: 100% (412/412), done.
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
-$ *helm template eunomia/deploy/helm/prereqs/ | oc apply -f -*
+$ *helm template deploy/helm/eunomia-operator/ --set openshift.route.enabled=true | oc apply -f -*
+
+
 namespace/eunomia-operator created
 customresourcedefinition.apiextensions.k8s.io/gitopsconfigs.eunomia.kohls.io created
 clusterrole.rbac.authorization.k8s.io/gitopsconfig-admin created
