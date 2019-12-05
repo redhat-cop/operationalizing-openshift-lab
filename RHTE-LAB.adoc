@@ -548,7 +548,7 @@ Resolving deltas: 100% (412/412), done.
 [subs=+quotes]
 --------------------------------------------------------------------------------
 $ **helm template deploy/helm/eunomia-operator/ \
-  --set openshift.route.enabled=true | oc apply -f -**
+  --set eunomia.operator.openshift.route.enabled=true | oc apply -f -**
 namespace/eunomia-operator created
 configmap/job-templates created
 serviceaccount/eunomia-operator created
