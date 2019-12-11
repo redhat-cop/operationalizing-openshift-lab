@@ -547,13 +547,17 @@ Resolving deltas: 100% (412/412), done.
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
-$ **helm template eunomia/deploy/helm/operator/ \
-  --set eunomia.operator.openshift.route.enabled=true \
-  --set eunomia.operator.image.tag=v0.0.1 \
-  --set eunomia.operator.image.pullPolicy=IfNotPresent | oc apply -f -**
-configmap/eunomia-templates created
+$ **helm template deploy/helm/eunomia-operator/ \
+  --set eunomia.operator.openshift.route.enabled=true | oc apply -f -**
+namespace/eunomia-operator created
+configmap/job-templates created
 serviceaccount/eunomia-operator created
 rolebinding.rbac.authorization.k8s.io/eunomia-operator created
+customresourcedefinition.apiextensions.k8s.io/gitopsconfigs.eunomia.kohls.io created
+clusterrole.rbac.authorization.k8s.io/gitopsconfig-admin created
+clusterrole.rbac.authorization.k8s.io/gitopsconfig-viewer created
+clusterrole.rbac.authorization.k8s.io/eunomia-operator created
+clusterrolebinding.rbac.authorization.k8s.io/eunomia-operator created
 role.rbac.authorization.k8s.io/eunomia-operator created
 service/eunomia-operator created
 deployment.apps/eunomia-operator created
