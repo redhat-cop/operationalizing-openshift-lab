@@ -52,4 +52,4 @@ parameters:
 - name: CLUSTER_CONFIG_REPO_DIR
   value: ''
 - name: TEMPLATE_PROCESSOR_IMAGE
-  value: quay.io/kohlstechnology/eunomia-applier:v0.0.1
+  value: quay.io/kohlstechnology/eunomia-applier:v0.1.4

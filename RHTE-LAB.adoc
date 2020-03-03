@@ -639,7 +639,7 @@ $ **oc adm policy add-cluster-role-to-user cluster-admin system:serviceaccount:c
 clusterrole.rbac.authorization.k8s.io/cluster-admin added: "system:serviceaccount:cluster-config:gitops-runner"
 --------------------------------------------------------------------------------
 +
-Create a `GitOpsConfig` for Eunomia that points to your `openshift-gitops-lab` repository and uses the `quay.io/kohlstechnology/eunomia-applier:v0.0.1` template processor:
+Create a `GitOpsConfig` for Eunomia that points to your `openshift-gitops-lab` repository and uses the `quay.io/kohlstechnology/eunomia-applier:v0.1.4` template processor:
 +
 [subs=+quotes]
 --------------------------------------------------------------------------------
@@ -658,7 +658,7 @@ spec:
   - type: Periodic
     cron: "@hourly"
   serviceAccountRef: gitops-runner
-  templateProcessorImage: quay.io/kohlstechnology/eunomia-applier:v0.0.1
+  templateProcessorImage: quay.io/kohlstechnology/eunomia-applier:v0.1.4
   resourceHandlingMode: None
   resourceDeletionMode: None
 EOF**
@@ -976,7 +976,7 @@ metadata:
   annotations:
     gitopsconfig.eunomia.kohls.io/initialized: "true"
     kubectl.kubernetes.io/last-applied-configuration: |
-      {"apiVersion":"eunomia.kohls.io/v1alpha1","kind":"GitOpsConfig","metadata":{"annotations":{},"name":"cluster-config","namespace":"cluster-config"},"spec":{"resourceDeletionMode":"None","resourceHandlingMode":"None","serviceAccountRef":"eunomia-runner","templateProcessorImage":"quay.io/kohlstechnology/eunomia-applier:v0.0.1","templateSource":{"contextDir":"","ref":"master","uri":"https://github.com/__GITOPS_ACCOUNT__/operationalizing-openshift-lab"},"triggers":[{"type":"Change"}]}}
+      {"apiVersion":"eunomia.kohls.io/v1alpha1","kind":"GitOpsConfig","metadata":{"annotations":{},"name":"cluster-config","namespace":"cluster-config"},"spec":{"resourceDeletionMode":"None","resourceHandlingMode":"None","serviceAccountRef":"eunomia-runner","templateProcessorImage":"quay.io/kohlstechnology/eunomia-applier:v0.1.4","templateSource":{"contextDir":"","ref":"master","uri":"https://github.com/__GITOPS_ACCOUNT__/operationalizing-openshift-lab"},"triggers":[{"type":"Change"}]}}
   creationTimestamp: "2019-09-11T19:22:09Z"
   finalizers:
   - eunomia-finalizer
@@ -994,7 +994,7 @@ spec:
   resourceDeletionMode: None
   resourceHandlingMode: None
   serviceAccountRef: eunomia-runner
-  templateProcessorImage: quay.io/kohlstechnology/eunomia-applier:v0.0.1
+  templateProcessorImage: quay.io/kohlstechnology/eunomia-applier:v0.1.4
   templateSource:
     contextDir: ""
     ref: master
@@ -1549,7 +1549,7 @@ Stage this hunk [y,n,q,a,d,/,j,J,g,e,?]? **y**
 @@ -52,3 +52,6 @@ parameters:
      value: \''
    - name: TEMPLATE_PROCESSOR_IMAGE
-     value: quay.io/KohlsTechnology/eunomia-applier:v0.0.1
+     value: quay.io/KohlsTechnology/eunomia-applier:v0.1.4
 +  - name: SCHEDULE
 +    description: Periodic schedule for gitops processing
 +    value: "@hourly"
